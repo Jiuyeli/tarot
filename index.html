@@ -35,7 +35,7 @@
             background-color: var(--color-bg-dark);
             color: var(--color-white);
             font-family: var(--font-body);
-            overflow: hidden; /* Prevent scrolling */
+            overflow: hidden;
             width: 100vw;
             height: 100vh;
             display: flex;
@@ -752,6 +752,82 @@
             100% { left: 200%; }
         }
 
+        /* Mobile Adaptation */
+        @media (max-width: 768px) {
+            h1.main-title {
+                font-size: 1.8rem;
+                margin-top: 1rem;
+            }
+            .spread-card {
+                width: 90vw;
+                max-width: 320px;
+                padding: 15px;
+            }
+            .fancy-input {
+                font-size: 1.2rem;
+                max-width: 90vw;
+            }
+            .number-input {
+                width: 45px !important;
+                height: 45px;
+                max-width: 45px;
+                font-size: 0.9rem;
+            }
+            #settingsPanel {
+                width: 260px;
+                right: -280px;
+            }
+            #settingsBtn {
+                top: 15px;
+                right: 15px;
+                font-size: 20px;
+            }
+            #musicBtn {
+                bottom: 15px;
+                right: 15px;
+                width: 36px;
+                height: 36px;
+                font-size: 16px;
+            }
+            #spread-layout {
+                top: 45%;
+                height: 65vh;
+            }
+            .layout-card-slot, .drawn-card-final {
+                width: 16vw;
+                height: calc(16vw * 1.57);
+                max-width: 70px;
+                max-height: 110px;
+                font-size: 0.6rem;
+            }
+            .fan-card {
+                width: 80px;
+                height: 125px;
+                margin-left: -40px;
+                margin-top: -125px;
+            }
+            #fan-container {
+                top: 96%;
+            }
+            .drawn-card-final .overlay-label {
+                font-size: 0.65rem;
+                padding: 2px 4px;
+                bottom: -20px;
+            }
+            .inputs-container {
+                gap: 10px;
+            }
+            #screen-result .glass-panel {
+                padding: 20px 15px;
+            }
+            .result-scroll-area {
+                max-height: 75vh;
+            }
+            #preloadScreen .main-title {
+                font-size: 1.8rem !important;
+            }
+        }
+
         /* Screens */
         .screen {
             position: absolute;
@@ -765,6 +841,15 @@
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.6s ease;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-bottom: 60px; /* Leave space at bottom for mobile */
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE and Edge */
+        }
+        
+        .screen::-webkit-scrollbar {
+            display: none; /* Chrome, Safari and Opera */
         }
 
         .screen.active {
@@ -837,6 +922,16 @@
     <!-- Mystic Symbols Background -->
     <div id="mysticSymbols"></div>
 
+    <!-- Preload Screen -->
+    <div id="preloadScreen" class="screen active" style="z-index: 1000; background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); top: 0; height: 100%; justify-content: center; opacity: 1; pointer-events: auto;">
+        <h1 class="main-title" style="opacity: 1; transform: none; animation: none; margin-bottom: 2rem;">✨ Tarot Divination ✨</h1>
+        <div style="width: 80%; max-width: 300px; height: 4px; background: rgba(212, 168, 83, 0.2); border-radius: 2px; overflow: hidden; position: relative;">
+            <div id="preloadBar" style="width: 0%; height: 100%; background: var(--color-gold); transition: width 0.3s ease;"></div>
+        </div>
+        <div id="preloadText" style="margin-top: 1rem; color: var(--color-gold); font-size: 0.9rem;">Connecting to the Universe... 0%</div>
+        <button id="preloadStartBtn" class="btn" style="margin-top: 2rem; opacity: 0; pointer-events: none; transform: translateY(20px); transition: all 0.5s ease;">Enter</button>
+    </div>
+
     <div id="app">
         <h1 class="main-title">✨ Tarot Divination ✨</h1>
 
@@ -866,11 +961,11 @@
                 <div class="wave"></div>
             </div>
         </button>
-        <audio id="bgMusic" loop preload="none"></audio>
+        <audio id="bgMusic" src="first_light_particles_0.wav" loop preload="auto"></audio>
 
         <!-- Screens -->
         <!-- Step 1: Spread Selection -->
-        <div id="screen-spread" class="screen active">
+        <div id="screen-spread" class="screen">
             <!-- Spread cards will go here -->
         </div>
 
@@ -978,6 +1073,83 @@
             hexagram: { name: "Hexagram", cardCount: 7, positions: ["过去", "现在", "未来", "阻碍", "环境", "建议", "结果"], description: "深入剖析复杂问题，揭示隐藏的阻碍与环境因素，并给出明确的行动建议。" },
             celtic: { name: "Celtic Cross", cardCount: 10, positions: ["现状", "阻碍", "基础", "过去", "目标", "未来", "自我", "环境", "希望/恐惧", "结果"], description: "最经典且全面的牌阵，层层剥开问题的核心，提供深度的灵魂指引与最终的走向预判。" }
         };
+
+        // --- Preload Assets ---
+        (function preloadAssets() {
+            const imagePaths = new Set();
+            TAROT_DECK.forEach(c => imagePaths.add('graph/' + c.imgName));
+            imagePaths.add('graph/背面牌.jpg');
+            
+            const audioPath = 'first_light_particles_0.wav';
+            
+            const totalAssets = imagePaths.size + 1; // +1 for audio
+            let loadedCount = 0;
+            let hasError = false;
+            
+            const bar = document.getElementById('preloadBar');
+            const text = document.getElementById('preloadText');
+            const btn = document.getElementById('preloadStartBtn');
+            const preloadScreen = document.getElementById('preloadScreen');
+            
+            function updateProgress() {
+                const percent = Math.floor((loadedCount / totalAssets) * 100);
+                bar.style.width = percent + '%';
+                text.textContent = `Connecting to the Universe... ${percent}%`;
+                
+                if (loadedCount >= totalAssets) {
+                    text.textContent = "The cards are ready.";
+                    btn.style.opacity = '1';
+                    btn.style.pointerEvents = 'auto';
+                    btn.style.transform = 'translateY(0)';
+                }
+            }
+            
+            function handleLoad() {
+                loadedCount++;
+                updateProgress();
+            }
+            
+            function handleError() {
+                loadedCount++;
+                hasError = true;
+                updateProgress();
+            }
+
+            imagePaths.forEach(src => {
+                const img = new Image();
+                img.onload = handleLoad;
+                img.onerror = handleError;
+                img.src = src;
+            });
+            
+            const audio = new Audio();
+            audio.oncanplaythrough = handleLoad;
+            audio.onerror = handleError;
+            audio.src = audioPath;
+            audio.load();
+            
+            // Fallback timeout just in case events don't fire on mobile
+            setTimeout(() => {
+                if (loadedCount < totalAssets) {
+                    loadedCount = totalAssets;
+                    updateProgress();
+                }
+            }, 10000); // 10 seconds max wait
+            
+            btn.addEventListener('click', () => {
+                preloadScreen.style.opacity = '0';
+                preloadScreen.style.pointerEvents = 'none';
+                setTimeout(() => {
+                    preloadScreen.style.display = 'none';
+                    switchScreen('screen-spread');
+                    // Unlock audio here
+                    if (!musicUnlocked) {
+                        musicUnlocked = true;
+                        toggleMusic();
+                    }
+                }, 600);
+            });
+        })();
 
         // --- Settings Management ---
         // ⚠️ 请在这里填入你的 DeepSeek API Key (注意保密，不要将此文件直接公开分享)
@@ -1312,7 +1484,6 @@
         particlesInput.value = AppSettings.particles;
 
         // Apply settings
-        bgMusic.src = AppSettings.musicUrl;
         bgMusic.volume = AppSettings.volume / 100;
 
         // Event Listeners for Settings
@@ -1424,6 +1595,7 @@
             
             const grid = document.createElement('div');
             grid.className = 'spread-grid';
+            grid.innerHTML = '<div style="width: 100%; text-align: center; color: var(--color-gold); margin-bottom: 10px; font-size: 1.1rem; animation: pulse 2s infinite;">双击选择牌阵</div><style>@keyframes pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }</style>';
 
             Object.entries(SPREADS).forEach(([key, spread], index) => {
                 const card = document.createElement('div');
@@ -1440,28 +1612,34 @@
                     card.style.transform = 'translateY(0)';
                 }, 500 + index * 150);
 
+                let clickTimer = null;
                 card.addEventListener('click', () => {
-                    grid.querySelectorAll('.spread-card').forEach(c => c.classList.remove('selected'));
-                    card.classList.add('selected');
-                    AppState.selectedSpread = spread;
-                    AppState.selectedSpreadKey = key;
-                    document.getElementById('confirmSpreadBtn').disabled = false;
+                    if (clickTimer) {
+                        clearTimeout(clickTimer);
+                        clickTimer = null;
+                        // Double click detected
+                        grid.querySelectorAll('.spread-card').forEach(c => c.classList.remove('selected'));
+                        card.classList.add('selected');
+                        AppState.selectedSpread = spread;
+                        AppState.selectedSpreadKey = key;
+                        
+                        // Proceed to next step immediately
+                        setTimeout(startQuestionStep, 300);
+                    } else {
+                        // Single click
+                        grid.querySelectorAll('.spread-card').forEach(c => c.classList.remove('selected'));
+                        card.classList.add('selected');
+                        
+                        clickTimer = setTimeout(() => {
+                            clickTimer = null;
+                        }, 300);
+                    }
                 });
 
                 grid.appendChild(card);
             });
 
-            const btnWrapper = document.createElement('div');
-            btnWrapper.style.cssText = 'text-align:center;margin-top:24px;';
-            btnWrapper.innerHTML = '<button class="btn" id="confirmSpreadBtn" disabled>确认牌阵，进入冥想 →</button>';
-            
             spreadScreen.appendChild(grid);
-            spreadScreen.appendChild(btnWrapper);
-
-            document.getElementById('confirmSpreadBtn').addEventListener('click', () => {
-                if (!AppState.selectedSpread) return;
-                startQuestionStep();
-            });
         }
 
         // --- Step 2: Question & Meditation ---
@@ -1630,7 +1808,7 @@
         }
 
         // --- Fan Deck & Draw Implementation ---
-        const N_VISIBLE = 11;
+        let N_VISIBLE = 11;
         const ARC_STEP_DEG = 9;
         
         let scrollOffsetRef = 0;
@@ -1683,6 +1861,7 @@
         };
 
         function initFanDeck() {
+            N_VISIBLE = window.innerWidth < 768 ? 7 : 11;
             drawQueue = [...AppState.meditationNumbers];
             currentDrawIndex = 0;
             AppState.drawnCards = [];
@@ -1775,9 +1954,9 @@
             scrollOffsetRef = ((scrollOffsetRef % 78) + 78) % 78;
 
             const isMobile = window.innerWidth < 768;
-            const ARC_RADIUS = isMobile ? 380 : 520;
+            const ARC_RADIUS = isMobile ? 260 : 520;
             const ARC_LIFT = ARC_RADIUS;
-            const baseScale = isMobile ? 0.7 : 1.0;
+            const baseScale = isMobile ? 0.8 : 1.0;
 
             const cards = fanContainer.querySelectorAll('.fan-card');
             
@@ -2123,3 +2302,4 @@ ${drawnText}
     </script>
 </body>
 </html>
+
