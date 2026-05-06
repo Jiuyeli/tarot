@@ -437,6 +437,7 @@
         }
 
         .meditation-box {
+            width: 90vw;
             max-width: 600px;
             text-align: center;
             line-height: 1.8;
@@ -446,6 +447,8 @@
             opacity: 0;
             transform: translateY(20px) scale(0.95);
             transition: all 0.8s ease-out;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
         }
         
         .meditation-box.show {
@@ -757,6 +760,11 @@
             h1.main-title {
                 font-size: 1.8rem;
                 margin-top: 1rem;
+                position: relative;
+                top: 15px; /* Added to push title down and avoid gear icon overlap */
+            }
+            .spread-grid {
+                padding-bottom: 40px; /* Added extra bottom margin for mobile system nav bars */
             }
             .spread-card {
                 width: 90vw;
@@ -823,8 +831,12 @@
             .result-scroll-area {
                 max-height: 75vh;
             }
-            #preloadScreen .main-title {
-                font-size: 1.8rem !important;
+            .meditation-box {
+                font-size: 0.95rem;
+                padding: 15px;
+                line-height: 1.6;
+                margin-bottom: 20px;
+                min-height: 120px;
             }
         }
 
@@ -2172,16 +2184,42 @@
                     <div class="corner-symbol bottom-right">✧</div>
                     <div class="result-scroll-area">
                         <h2 class="spread-title" style="text-align: center; font-size: 2rem; margin-bottom: 20px;">解读结果</h2>
-                        <div id="apiContent" style="line-height: 1.8; font-size: 1.1rem; white-space: pre-wrap;"></div>
-                        <div id="loadingIndicator" style="text-align: center; margin-top: 20px;">
-                            <div style="font-size: 2rem; animation: spin 2s linear infinite;">✨</div>
-                            <p style="margin-top: 10px; color: var(--color-gold);">正在连接宇宙能量...</p>
+                        
+                        <div id="loadingIndicator" style="text-align: center; margin: 40px 0; transition: opacity 1.2s ease, transform 1.2s ease;">
+                            <div class="magic-loading-text">
+                                <span class="desktop-text">魔法正在施展中≽^-⩊-^≼</span>
+                                <span class="mobile-text">魔法正在施展中<br>≽^-⩊-^≼</span>
+                            </div>
+                            <div style="width: 80%; max-width: 300px; height: 4px; background: rgba(212, 168, 83, 0.2); border-radius: 2px; overflow: hidden; margin: 15px auto 0; position: relative; box-shadow: inset 0 0 5px rgba(0,0,0,0.5);">
+                                <div id="magicProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, transparent, var(--color-gold), transparent); box-shadow: 0 0 10px var(--color-gold); animation: magicProgress 2s infinite ease-in-out;"></div>
+                            </div>
                         </div>
-                        <button class="btn" id="restartBtn" style="display: none; margin: 30px auto 0;">重新占卜</button>
+
+                        <div id="apiContent" style="line-height: 1.8; font-size: 1.1rem; white-space: pre-wrap; display: none; opacity: 0; transform: translateY(20px); transition: opacity 1.5s ease, transform 1.5s ease;"></div>
+                        <button class="btn" id="restartBtn" style="display: none; margin: 30px auto 0; opacity: 0; transition: opacity 1.5s ease 0.8s;">重新占卜</button>
                     </div>
                 </div>
                 <style>
-                    @keyframes spin { 100% { transform: rotate(360deg); } }
+                    .magic-loading-text {
+                        color: var(--color-gold);
+                        font-family: var(--font-title);
+                        font-size: 1.2rem;
+                        text-shadow: 0 0 10px rgba(212, 168, 83, 0.6);
+                        animation: pulseText 2s infinite alternate;
+                    }
+                    .mobile-text { display: none; }
+                    @media (max-width: 768px) {
+                        .desktop-text { display: none; }
+                        .mobile-text { display: block; line-height: 1.5; }
+                    }
+                    @keyframes pulseText {
+                        0% { opacity: 0.6; text-shadow: 0 0 5px rgba(212, 168, 83, 0.4); }
+                        100% { opacity: 1; text-shadow: 0 0 15px rgba(212, 168, 83, 0.8); }
+                    }
+                    @keyframes magicProgress {
+                        0% { transform: translateX(-100%); width: 50%; }
+                        100% { transform: translateX(200%); width: 50%; }
+                    }
                 </style>
             `;
             screen.innerHTML = resultHTML;
@@ -2234,7 +2272,7 @@ ${drawnText}
                         ],
                         temperature: 0.8,
                         max_tokens: 2048,
-                        stream: true
+                        stream: false // Changed to false for one-time render
                     })
                 });
 
@@ -2243,13 +2281,31 @@ ${drawnText}
                     throw new Error(`API 错误 (${response.status}): ${errText}`);
                 }
 
-                loadingIndicator.style.display = 'none';
-                
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder('utf-8');
-                let done = false;
+                const data = await response.json();
+                const fullText = data.choices[0].message.content;
 
-                let fullText = '';
+                // Smooth transition out for loading indicator
+                loadingIndicator.style.opacity = '0';
+                loadingIndicator.style.transform = 'translateY(-20px)';
+                
+                setTimeout(() => {
+                    loadingIndicator.style.display = 'none';
+                    
+                    apiContent.style.display = 'block';
+                    apiContent.innerHTML = formatAPIContent(fullText);
+                    
+                    // Trigger reflow
+                    apiContent.offsetHeight;
+                    
+                    // Smooth transition in for result content
+                    apiContent.style.opacity = '1';
+                    apiContent.style.transform = 'translateY(0)';
+                    
+                    restartBtn.style.display = 'block';
+                    // Trigger reflow
+                    restartBtn.offsetHeight;
+                    restartBtn.style.opacity = '1';
+                }, 1200);
                 
                 function formatAPIContent(text) {
                     let html = text.replace(/\n/g, '<br>');
@@ -2263,43 +2319,19 @@ ${drawnText}
                     html = html.replace(/# (.*?)<br>/g, '<div class="api-divider"></div><h1 class="result-title-grad" style="text-align:center; margin-bottom:15px; font-size:1.8rem;">$1</h1>');
                     return html;
                 }
-
-                while (!done) {
-                    const { value, done: readerDone } = await reader.read();
-                    done = readerDone;
-                    if (value) {
-                        const chunk = decoder.decode(value, { stream: true });
-                        const lines = chunk.split('\n').filter(line => line.trim() !== '');
-                        for (const line of lines) {
-                            if (line === 'data: [DONE]') {
-                                done = true;
-                                break;
-                            }
-                            if (line.startsWith('data: ')) {
-                                try {
-                                    const data = JSON.parse(line.slice(6));
-                                    const delta = data.choices[0].delta.content;
-                                    if (delta) {
-                                        fullText += delta;
-                                        apiContent.innerHTML = formatAPIContent(fullText);
-                                        // Scroll to bottom
-                                        apiContent.parentElement.scrollTop = apiContent.parentElement.scrollHeight;
-                                    }
-                                } catch (e) {
-                                    console.error('Error parsing stream data:', e, line);
-                                }
-                            }
-                        }
-                    }
-                }
+                
             } catch (error) {
                 loadingIndicator.style.display = 'none';
+                apiContent.style.display = 'block';
+                apiContent.style.opacity = '1';
+                apiContent.style.transform = 'translateY(0)';
                 apiContent.innerHTML += `<br><br><span style="color: #ff6b6b;">发生错误：${error.message}</span>`;
-            } finally {
                 restartBtn.style.display = 'block';
+                restartBtn.style.opacity = '1';
             }
         }
     </script>
 </body>
 </html>
+
 
