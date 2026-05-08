@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="code/styles.css">
 </head>
 <body>
 
@@ -25,6 +25,21 @@
         </div>
         <div id="preloadText" style="margin-top: 1rem; color: var(--color-gold); font-size: 0.9rem;">Connecting to the Universe... 0%</div>
         <button id="preloadStartBtn" class="btn" style="margin-top: 2rem; opacity: 0; pointer-events: none; transform: translateY(20px); transition: all 0.5s ease;">Enter</button>
+    </div>
+
+    <!-- Entry Notice Modal -->
+    <div id="entryNoticeOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 2000; justify-content: center; align-items: center;">
+        <div id="entryNoticeBox">
+            <div class="entry-notice-corner top-left">✧</div>
+            <div class="entry-notice-corner top-right">✧</div>
+            <div class="entry-notice-corner bottom-left">✧</div>
+            <div class="entry-notice-corner bottom-right">✧</div>
+            <h2 class="entry-notice-title">✨ 入 场 须 知 ✨</h2>
+            <p class="entry-notice-text">本网站仅提供心灵指引与娱乐参考，请勿过度迷信。常见疑问可点击信封查看作者说</p>
+            <p class="entry-notice-text">关于打赏：从能量角度来说，金钱也是一种能量交换，只占卜却不付出任何成本，会让你和塔罗之间的能量链接变弱，占卜准度也会受影响。所以建议大家按照自己的抽牌数量进行对应打赏哦~</p>
+            <p class="entry-notice-text">如有网站使用建议，请在阅读完解牌结果后，点击页面匿名建议，向作者提交匿名反馈，感谢各位客官的支持！</p>
+            <button id="entryStartBtn" class="btn entry-start-btn">开启塔罗之旅</button>
+        </div>
     </div>
 
     <div id="app">
@@ -69,7 +84,7 @@
                 <div class="wave"></div>
             </div>
         </button>
-        <audio id="bgMusic" src="first_light_particles_0.wav" loop preload="auto"></audio>
+        <audio id="bgMusic" src="sound_effect/first_light_particles_0.wav" loop preload="auto"></audio>
 
         <!-- Screens -->
         <!-- Step 1: Spread Selection -->
@@ -100,10 +115,10 @@
     </div>
 
     <!-- Load order: data → background → app logic -->
-    <script src="tarot-data.js"></script>
-    <script src="author-messages.js"></script>
-    <script src="starry-background.js"></script>
-    <script src="app.js"></script>
+    <script src="code/tarot-data.js"></script>
+    <script src="code/author-messages.js"></script>
+    <script src="code/starry-background.js"></script>
+    <script src="code/app.js"></script>
 
 </body>
 </html>
