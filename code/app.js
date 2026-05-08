@@ -1,5 +1,5 @@
 // --- Preload & Settings ---
-// --- Preload Assets ---
+// --- Preload Assets ---谁偷偷盗用我的apikey就是大笨蛋！！！倒霉倒霉倒霉
         (function preloadAssets() {
             const imagePaths = new Set();
             TAROT_DECK.forEach(c => imagePaths.add('../graph/' + c.imgName));
@@ -87,8 +87,7 @@
         })();
 
         // --- Settings Management ---
-        // ⚠️ 请在这里填入你的 DeepSeek API Key (注意保密，不要将此文件直接公开分享)
-        const DEEPSEEK_API_KEY = 'sk-8b78610f0e31452c88f83ed4a99699cf'; // 例如: 'sk-xxxxxxxxxxxxxxxxxxxxxxxx'
+        const DEEPSEEK_API_KEY = 'sk-8b78610f0e31452c88f83ed4a99699cf'; 
 
         const AppSettings = {
             apiKey: DEEPSEEK_API_KEY,
