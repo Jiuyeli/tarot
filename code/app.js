@@ -68,10 +68,25 @@
                     preloadScreen.style.display = 'none';
                     const entryOverlay = document.getElementById('entryNoticeOverlay');
                     entryOverlay.style.display = 'flex';
+                    const entryBtn = document.getElementById('entryStartBtn');
+                    entryBtn.textContent = '开启塔罗之旅（3s）';
+                    let count = 3;
+                    const countdown = setInterval(() => {
+                        count--;
+                        if (count <= 0) {
+                            clearInterval(countdown);
+                            entryBtn.textContent = '开启塔罗之旅';
+                            entryBtn.disabled = false;
+                            entryBtn.classList.add('ready');
+                        } else {
+                            entryBtn.textContent = `开启塔罗之旅（${count}s）`;
+                        }
+                    }, 1000);
                 }, 600);
             });
 
             document.getElementById('entryStartBtn').addEventListener('click', () => {
+                if (document.getElementById('entryStartBtn').disabled) return;
                 const entryOverlay = document.getElementById('entryNoticeOverlay');
                 entryOverlay.style.opacity = '0';
                 entryOverlay.style.transition = 'opacity 0.4s ease';
@@ -87,11 +102,9 @@
         })();
 
         // --- Settings Management ---
-        // ⚠️ 请在这里填入你的 DeepSeek API Key (注意保密，不要将此文件直接公开分享)
-        const DEEPSEEK_API_KEY = 'sk-8b78610f0e31452c88f83ed4a99699cf'; // 例如: 'sk-xxxxxxxxxxxxxxxxxxxxxxxx'
+        // API Key 已移至服务端 api/proxy.js，由环境变量 DEEPSEEK_API_KEY 管理
 
         const AppSettings = {
-            apiKey: DEEPSEEK_API_KEY,
             musicUrl: 'sound_effect/first_light_particles_0.wav',
             volume: parseInt(localStorage.getItem('tarot_volume') || '40', 10),
             particles: parseInt(localStorage.getItem('tarot_particles') || '250', 10),
@@ -1199,15 +1212,33 @@ requestAnimationFrame(animateCanvas);
             suggestModal.addEventListener('click', (e) => {
                 if (e.target === suggestModal) closeSuggestModal();
             });
-            document.getElementById('sendSuggestBtn').addEventListener('click', () => {
+            document.getElementById('sendSuggestBtn').addEventListener('click', async () => {
                 const content = document.getElementById('suggestText').value.trim();
                 if (!content) {
                     document.getElementById('suggestMsg').textContent = '请输入建议内容';
                     return;
                 }
-                window.open(`https://github.com/Jiuyeli/tarot/issues/new?body=${encodeURIComponent(content)}`, '_blank');
-                document.getElementById('suggestText').value = '';
-                document.getElementById('suggestMsg').textContent = '感谢你的反馈 ✅';
+                const btn = document.getElementById('sendSuggestBtn');
+                btn.disabled = true;
+                btn.textContent = '提交中...';
+                try {
+                    const res = await fetch('/api/suggest', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ body: content })
+                    });
+                    const result = await res.json();
+                    if (res.ok && result.success) {
+                        document.getElementById('suggestText').value = '';
+                        document.getElementById('suggestMsg').textContent = '感谢你的反馈 ✅';
+                    } else {
+                        document.getElementById('suggestMsg').textContent = result.error || '提交失败，请稍后再试';
+                    }
+                } catch (err) {
+                    document.getElementById('suggestMsg').textContent = '网络错误，请稍后再试';
+                }
+                btn.disabled = false;
+                btn.textContent = '提交建议';
             });
 
             // --- Donate Modal ---
@@ -1236,14 +1267,6 @@ requestAnimationFrame(animateCanvas);
             const restartBtn = document.getElementById('restartBtn');
             const resultBtnRow = document.getElementById('resultBtnRow');
 
-            if (!AppSettings.apiKey) {
-                loadingIndicator.style.display = 'none';
-                apiContent.innerHTML = `<span style="color: #ff6b6b;">错误：未设置 DeepSeek API Key。请在 index.html 代码中的 DEEPSEEK_API_KEY 处填入您的 API Key。</span>`;
-                resultBtnRow.style.display = 'flex';
-                resultBtnRow.style.opacity = '1';
-                return;
-            }
-
             const drawnText = AppState.drawnCards.map((c, i) => {
                 return `[${c.position}] ${c.card.name} (${c.isReversed ? '逆位' : '正位'})`;
             }).join('\n');
@@ -1259,27 +1282,15 @@ ${drawnText}
 请给出详细解读，包括每张牌在牌位中的具体含义、牌阵整体能量分析、以及给用户的建议。`;
 
             try {
-                const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                const response = await fetch('/api/proxy', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${AppSettings.apiKey}`
-                    },
-                    body: JSON.stringify({
-                        model: 'deepseek-chat',
-                        messages: [
-                            { role: 'system', content: systemPrompt },
-                            { role: 'user', content: userPrompt }
-                        ],
-                        temperature: 0.8,
-                        max_tokens: 2048,
-                        stream: false // Changed to false for one-time render
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ systemPrompt, userPrompt })
                 });
 
                 if (!response.ok) {
-                    const errText = await response.text();
-                    throw new Error(`API 错误 (${response.status}): ${errText}`);
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.error || `服务器错误 (${response.status})`);
                 }
 
                 const data = await response.json();
