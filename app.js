@@ -462,7 +462,7 @@ requestAnimationFrame(animateCanvas);
                 inputsHTML += `
                     <div class="input-group">
                         <label>第 ${i + 1} 个数字</label>
-                        <input type="number" class="fancy-input number-input" min="1" max="78" placeholder="1-78" style="width: 80px;" data-index="${i}">
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="number-input" placeholder="1-78" data-index="${i}" autocomplete="off">
                     </div>
                 `;
             }
@@ -484,33 +484,62 @@ requestAnimationFrame(animateCanvas);
                 </div>
             `;
 
-            // Trigger animation
             setTimeout(() => {
                 document.getElementById('meditationText').classList.add('show');
             }, 100);
 
-            // Show inputs after 2 seconds
             setTimeout(() => {
                 document.getElementById('numberInputContainer').style.opacity = '1';
-                const firstInput = document.querySelector('.number-input');
-                if (firstInput) firstInput.focus();
             }, 2100);
 
             document.getElementById('confirmNumberBtn').addEventListener('click', handleNumberSubmit);
             
-            const inputs = document.querySelectorAll('.number-input');
-            inputs.forEach((input, index) => {
-                input.addEventListener('input', validateNumberInputs);
-                input.addEventListener('blur', validateNumberInputs);
-                input.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        if (index < inputs.length - 1) {
-                            inputs[index + 1].focus();
+            const allInputs = document.querySelectorAll('.number-input');
+            
+            allInputs.forEach((input, index) => {
+
+                input.addEventListener('input', () => {
+                    const val = input.value.replace(/[^0-9]/g, '');
+                    input.value = val;
+
+                    if (val.length === 2 && index < allInputs.length - 1) {
+                        allInputs[index + 1].focus();
+                    }
+
+                    validateNumberInputs();
+                });
+
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Backspace') {
+                        if (input.value) {
+                            return;
+                        }
+                        if (index > 0) {
+                            const prev = allInputs[index - 1];
+                            prev.focus();
+                            prev.value = prev.value.slice(0, -1);
+                            validateNumberInputs();
+                            e.preventDefault();
+                        }
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (index < allInputs.length - 1) {
+                            allInputs[index + 1].focus();
                         } else {
                             validateNumberInputs();
                             handleNumberSubmit();
                         }
                     }
+                });
+
+                input.addEventListener('focus', () => {
+                    allInputs.forEach(inp => inp.classList.remove('num-focus'));
+                    input.classList.add('num-focus');
+                });
+
+                input.addEventListener('blur', () => {
+                    input.classList.remove('num-focus');
+                    validateNumberInputs();
                 });
             });
 
