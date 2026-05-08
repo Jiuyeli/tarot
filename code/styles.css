@@ -646,9 +646,8 @@
 
         .fan-card-back {
             background: linear-gradient(135deg, rgba(200,157,72,0.15), rgba(245,240,255,0.08)),
-                        url('../graph/背面牌.jpg'),
-                        url('../graph/gold-foil-texture.png');
-            background-size: cover, cover, 200px 200px;
+                        url('../graph/背面牌.jpg');
+            background-size: cover, cover;
             background-blend-mode: overlay, normal;
             background-position: center;
             border: 1.5px solid var(--color-gold);

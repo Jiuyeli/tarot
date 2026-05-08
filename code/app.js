@@ -1,11 +1,11 @@
 // --- Preload & Settings ---
-// --- Preload Assets ---谁偷偷盗用我的apikey就是大笨蛋！！！倒霉倒霉倒霉
+// --- Preload Assets ---
         (function preloadAssets() {
             const imagePaths = new Set();
-            TAROT_DECK.forEach(c => imagePaths.add('../graph/' + c.imgName));
-            imagePaths.add('../graph/背面牌.jpg');
+            TAROT_DECK.forEach(c => imagePaths.add('graph/' + c.imgName));
+            imagePaths.add('graph/背面牌.jpg');
             
-            const audioPath = '../sound_effect/first_light_particles_0.wav';
+            const audioPath = 'sound_effect/first_light_particles_0.wav';
             
             const totalAssets = imagePaths.size + 1; // +1 for audio
             let loadedCount = 0;
@@ -87,11 +87,12 @@
         })();
 
         // --- Settings Management ---
-        const DEEPSEEK_API_KEY = 'sk-8b78610f0e31452c88f83ed4a99699cf'; 
+        // ⚠️ 请在这里填入你的 DeepSeek API Key (注意保密，不要将此文件直接公开分享)
+        const DEEPSEEK_API_KEY = 'sk-8b78610f0e31452c88f83ed4a99699cf'; // 例如: 'sk-xxxxxxxxxxxxxxxxxxxxxxxx'
 
         const AppSettings = {
             apiKey: DEEPSEEK_API_KEY,
-            musicUrl: '../sound_effect/first_light_particles_0.wav',
+            musicUrl: 'sound_effect/first_light_particles_0.wav',
             volume: parseInt(localStorage.getItem('tarot_volume') || '40', 10),
             particles: parseInt(localStorage.getItem('tarot_particles') || '250', 10),
             sfxEnabled: localStorage.getItem('tarot_sfx') !== 'false',
@@ -124,9 +125,9 @@ requestAnimationFrame(animateCanvas);
         const sfxToggleBtn = document.getElementById('sfxToggleBtn');
 
         // --- Sound Effects ---
-        const sfxCardTurn = new Audio('../sound_effect/cardturn.wav');
+        const sfxCardTurn = new Audio('sound_effect/cardturn.wav');
         sfxCardTurn.volume = 0.25;
-        const sfxConfirm = new Audio('../sound_effect/confirm.wav');
+        const sfxConfirm = new Audio('sound_effect/confirm.wav');
         sfxConfirm.volume = 0.25;
 
         function playSfx(audio) {
@@ -991,7 +992,7 @@ requestAnimationFrame(animateCanvas);
             const isReversed = Math.random() > 0.5;
             
             front.innerHTML = `
-                <img src="../graph/${tarotData.imgName}" alt="${tarotData.name}" onerror="this.style.display='none'">
+                <img src="graph/${tarotData.imgName}" alt="${tarotData.name}" onerror="this.style.display='none'">
                 <div class="card-name-overlay">${tarotData.name}</div>
             `;
 
@@ -1023,25 +1024,18 @@ requestAnimationFrame(animateCanvas);
         }
 
         function flyCardToLayout(sourceCard, tarotData, isReversed) {
-            // Get position of source card
-            const rect = sourceCard.getBoundingClientRect();
             const positions = SPREAD_POSITIONS[AppState.selectedSpreadKey];
             const targetPos = positions[currentDrawIndex];
 
-            // Create flying card
+            // Create the card directly at the target position
             const flyCard = document.createElement('div');
             flyCard.className = 'drawn-card-final';
-            flyCard.style.left = rect.left + rect.width / 2 + 'px';
-            flyCard.style.top = rect.top + rect.height / 2 + 'px';
-            flyCard.style.transform = `translate(-50%, -50%) ${isReversed ? 'rotate(180deg)' : 'rotate(0deg)'}`;
             
             flyCard.innerHTML = `
-                <img src="../graph/${tarotData.imgName}" onerror="this.style.display='none'">
+                <img src="graph/${tarotData.imgName}" onerror="this.style.display='none'">
                 <div class="overlay-label" style="${isReversed ? 'transform: translateX(-50%) rotate(180deg); bottom: auto; top: -25px;' : ''}">${tarotData.name}${isReversed ? ' (逆)' : ''}</div>
             `;
             
-            document.body.appendChild(flyCard);
-
             // Record
             AppState.drawnCards.push({
                 card: tarotData,
@@ -1052,25 +1046,27 @@ requestAnimationFrame(animateCanvas);
             // Hide original card temporarily to avoid visual dup
             sourceCard.style.opacity = '0';
 
-            // Trigger reflow
-            flyCard.offsetHeight;
-
-            // Fly to target
+            // Attach to layout container directly
+            spreadLayout.appendChild(flyCard);
+            
+            // Set initial state for fade-in
             flyCard.style.left = targetPos.x;
             flyCard.style.top = targetPos.y;
+            flyCard.style.opacity = '0';
+            
             if (targetPos.rotate) {
                 flyCard.style.transform = `translate(-50%, -50%) rotate(${targetPos.rotate + (isReversed ? 180 : 0)}deg)`;
             } else {
                 flyCard.style.transform = `translate(-50%, -50%) ${isReversed ? 'rotate(180deg)' : 'rotate(0deg)'}`;
             }
 
+            // Trigger reflow
+            flyCard.offsetHeight;
+
+            // Fade in
+            flyCard.style.opacity = '1';
+
             setTimeout(() => {
-                // Fly done, attach to layout container
-                spreadLayout.appendChild(flyCard);
-                // Adjust coords to be relative to container
-                flyCard.style.left = targetPos.x;
-                flyCard.style.top = targetPos.y;
-                
                 currentDrawIndex++;
                 
                 // Hide deck, advance offset, and prepare next
@@ -1148,11 +1144,11 @@ requestAnimationFrame(animateCanvas);
                         <p id="donatePriceText" style="color: var(--color-white); font-size: 1rem; margin-bottom: 16px; font-weight: 600;"></p>
                         <div class="qr-row">
                             <div class="qr-item">
-                                <img src="../money/Alipay.jpg" alt="支付宝" style="width: 100%; border-radius: 10px;">
+                                <img src="money/Alipay.jpg" alt="支付宝" style="width: 100%; border-radius: 10px;">
                                 <span style="color: var(--color-gold); font-size: 0.8rem; margin-top: 6px;">支付宝</span>
                             </div>
                             <div class="qr-item">
-                                <img src="../money/WechatPay.jpg" alt="微信" style="width: 100%; border-radius: 10px;">
+                                <img src="money/WechatPay.jpg" alt="微信" style="width: 100%; border-radius: 10px;">
                                 <span style="color: var(--color-gold); font-size: 0.8rem; margin-top: 6px;">微信支付</span>
                             </div>
                         </div>
