@@ -161,7 +161,7 @@
             const container = document.getElementById('mysticSymbols');
             if (!container) return;
             container.innerHTML = '';
-            const symbols = ['✦', '✧', '⬥', '☾', '✶'];
+            const symbols = ['✣', '✧', '☊', '☾', '☿'];
             const count = 15;
             const minDist = 180;
             mysticSymbolsData = [];
@@ -212,20 +212,56 @@
             if (!mysticSymbolsData.length) return;
             const vw = window.innerWidth;
             const vh = window.innerHeight;
+            const repulsionDist = 160;
+            const repulsionStrength = 0.1;
+            const maxSpeed = 0.55;
             
             mysticSymbolsData.forEach(s => {
                 s.x += s.vx;
                 s.y += s.vy;
                 s.rotation += s.rotationSpeed;
                 
-                const swayX = Math.sin(time * s.swaySpeed + s.swayPhase) * s.swayAmp;
-                const swayY = Math.cos(time * s.swaySpeed * 0.7 + s.swayPhase + 1) * s.swayAmp * 0.8;
+                if (Math.random() < 0.003) {
+                    s.vx += (Math.random() - 0.5) * 0.2;
+                    s.vy += (Math.random() - 0.5) * 0.2;
+                }
                 
                 if (s.x < -40) s.x = vw + 30;
                 if (s.x > vw + 40) s.x = -30;
                 if (s.y < -40) s.y = vh + 30;
                 if (s.y > vh + 40) s.y = -30;
-                
+            });
+            
+            for (let i = 0; i < mysticSymbolsData.length; i++) {
+                for (let j = i + 1; j < mysticSymbolsData.length; j++) {
+                    const a = mysticSymbolsData[i];
+                    const b = mysticSymbolsData[j];
+                    const dx = a.x - b.x;
+                    const dy = a.y - b.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < repulsionDist && dist > 0) {
+                        const force = (repulsionDist - dist) / repulsionDist * repulsionStrength;
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+                        a.vx += nx * force;
+                        a.vy += ny * force;
+                        b.vx -= nx * force;
+                        b.vy -= ny * force;
+                    }
+                }
+            }
+            
+            mysticSymbolsData.forEach(s => {
+                const speed = Math.sqrt(s.vx * s.vx + s.vy * s.vy);
+                if (speed > maxSpeed) {
+                    s.vx = (s.vx / speed) * maxSpeed;
+                    s.vy = (s.vy / speed) * maxSpeed;
+                }
+            });
+            
+            mysticSymbolsData.forEach(s => {
+                const swayX = Math.sin(time * s.swaySpeed + s.swayPhase) * s.swayAmp;
+                const swayY = Math.cos(time * s.swaySpeed * 0.7 + s.swayPhase + 1) * s.swayAmp * 0.8;
                 s.el.style.transform = `translate(${s.x}px, ${s.y}px) translate(${swayX}px, ${swayY}px) rotate(${s.rotation}deg)`;
             });
         }

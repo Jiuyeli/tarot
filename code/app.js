@@ -483,10 +483,7 @@ requestAnimationFrame(animateCanvas);
             let inputsHTML = '';
             for (let i = 0; i < cardCount; i++) {
                 inputsHTML += `
-                    <div class="input-group">
-                        <label>第 ${i + 1} 个数字</label>
-                        <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="number-input" placeholder="1-78" data-index="${i}" autocomplete="off">
-                    </div>
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="number-input" placeholder="${i + 1}" data-index="${i}" autocomplete="off">
                 `;
             }
 
@@ -499,6 +496,7 @@ requestAnimationFrame(animateCanvas);
                     ${promptText}
                 </div>
                 <div id="numberInputContainer" style="opacity: 0; transition: opacity 1s; display: flex; flex-direction: column; align-items: center;">
+                    <p id="numberHint" style="color: rgba(212,168,83,0.55); font-size: 0.75rem; margin-bottom: 8px; transition: opacity 0.6s ease;">请输入1-78间的数字</p>
                     <div class="inputs-container">
                         ${inputsHTML}
                     </div>
@@ -518,12 +516,18 @@ requestAnimationFrame(animateCanvas);
             document.getElementById('confirmNumberBtn').addEventListener('click', handleNumberSubmit);
             
             const allInputs = document.querySelectorAll('.number-input');
+            if (allInputs.length > 0) {
+                setTimeout(() => allInputs[0].focus(), 2200);
+            }
             
             allInputs.forEach((input, index) => {
 
                 input.addEventListener('input', () => {
                     const val = input.value.replace(/[^0-9]/g, '');
                     input.value = val;
+
+                    const anyFilled = [...allInputs].some(inp => inp.value.length > 0);
+                    document.getElementById('numberHint').style.opacity = anyFilled ? '0' : '1';
 
                     if (val.length === 2 && index < allInputs.length - 1) {
                         allInputs[index + 1].focus();
