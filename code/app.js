@@ -107,7 +107,13 @@
         const AppSettings = {
             musicUrl: 'sound_effect/first_light_particles_0.wav',
             volume: parseInt(localStorage.getItem('tarot_volume') || '40', 10),
-            particles: parseInt(localStorage.getItem('tarot_particles') || '250', 10),
+            particles: (function() {
+                const saved = localStorage.getItem('tarot_particles');
+                if (saved) return parseInt(saved, 10);
+                const vw = window.innerWidth;
+                const auto = Math.min(400, Math.max(100, Math.floor(vw * 0.22)));
+                return auto;
+            })(),
             sfxEnabled: localStorage.getItem('tarot_sfx') !== 'false',
             save() {
                 localStorage.setItem('tarot_volume', this.volume);
@@ -1134,7 +1140,8 @@ requestAnimationFrame(animateCanvas);
 
                         <div id="apiContent" style="line-height: 1.8; font-size: 1.1rem; white-space: pre-wrap; display: none; opacity: 0; transform: translateY(20px); transition: opacity 1.5s ease, transform 1.5s ease;"></div>
                         <div class="btn-row" id="resultBtnRow" style="display: none; margin-top: 30px; opacity: 0; transition: opacity 1.5s ease 0.8s;">
-                            <button class="btn" id="restartBtn">重新占卜</button>
+                            <button class="btn" id="copyResultBtn">📃复制结果</button>
+                            <button class="btn" id="restartBtn">🔮重新占卜</button>
                             <button class="btn" id="suggestBtn">💬 匿名建议</button>
                             <button class="btn" id="donateBtn">🎁 打赏作者</button>
                         </div>
@@ -1199,6 +1206,20 @@ requestAnimationFrame(animateCanvas);
 
             document.getElementById('restartBtn').addEventListener('click', () => {
                 location.reload();
+            });
+
+            document.getElementById('copyResultBtn').addEventListener('click', () => {
+                const content = document.getElementById('apiContent').innerText;
+                navigator.clipboard.writeText(content).then(() => {
+                    const btn = document.getElementById('copyResultBtn');
+                    const original = btn.textContent;
+                    btn.textContent = '✅已复制';
+                    setTimeout(() => { btn.textContent = original; }, 2000);
+                }).catch(() => {
+                    const btn = document.getElementById('copyResultBtn');
+                    btn.textContent = '❌复制失败';
+                    setTimeout(() => { btn.textContent = '📃复制结果'; }, 2000);
+                });
             });
 
             // --- Suggest Modal ---
