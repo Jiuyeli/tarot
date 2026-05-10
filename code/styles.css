@@ -497,7 +497,7 @@
             width: 62px !important;
             height: 62px;
             max-width: 62px;
-            border-radius: 14px;
+            border-radius: 20px;
             border: 2px solid rgba(212, 168, 83, 0.3) !important;
             background: var(--glass-bg);
             backdrop-filter: blur(10px);
@@ -1306,6 +1306,99 @@
         .entry-start-btn.ready:hover {
             background: linear-gradient(135deg, rgba(200, 157, 72, 0.45), rgba(40, 22, 80, 0.9)) !important;
             box-shadow: 0 0 24px rgba(200, 157, 72, 0.45) !important;
+        }
+
+        /* Reading Style Selector */
+        .style-selector-box {
+            position: relative;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            overflow: hidden;
+            padding: 10px 0 8px;
+        }
+
+        .style-ticks {
+            position: absolute;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-evenly;
+            padding: 0 calc(50% - 38px);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .style-ticks-top { top: 4px; }
+        .style-ticks-bottom { bottom: 3px; }
+
+        .style-tick {
+            width: 1px;
+            background: rgba(212, 175, 55, 0.3);
+            flex-shrink: 0;
+            height: 5px;
+            transition: background 0.3s ease;
+        }
+
+        .style-tick.center {
+            height: 9px;
+            background: rgba(212, 175, 55, 0.55);
+        }
+
+        .style-scroll-container {
+            position: relative;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-behavior: smooth;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            padding: 7px 0;
+            cursor: grab;
+            user-select: none;
+            z-index: 1;
+        }
+
+        .style-scroll-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .style-scroll-container:active {
+            cursor: grabbing;
+        }
+
+        .style-scroll-track {
+            display: flex;
+            gap: 8px;
+            padding: 0 calc(50% - 38px);
+        }
+
+        .style-chip {
+            flex-shrink: 0;
+            scroll-snap-align: center;
+            padding: 4px 14px;
+            border-radius: 0;
+            background: transparent;
+            border: none;
+            color: rgba(250, 248, 245, 0.4);
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .style-chip:hover {
+            color: rgba(250, 248, 245, 0.7);
+        }
+
+        .style-chip.active {
+            color: var(--color-gold);
+            font-weight: 600;
+            transform: scale(1.1);
+            text-shadow: 0 0 12px rgba(212, 175, 55, 0.35);
         }
 
         @media (max-width: 768px) {

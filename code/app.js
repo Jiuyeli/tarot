@@ -104,6 +104,34 @@
         // --- Settings Management ---
         // API Key 已移至服务端 api/proxy.js，由环境变量 DEEPSEEK_API_KEY 管理
 
+        const READING_STYLES = [
+            {
+                id: 'poetic',
+                name: '诗意',
+                prompt: '你是一位资深塔罗牌解读师，拥有20年占卜经验。你精通韦特塔罗、托特塔罗等多种体系。你的解读风格既专业又富有诗意，能够将牌面符号与提问者的生活情境巧妙连接。你总是先解读每张牌在特定牌位中的含义，然后综合分析整个牌阵的能量流动，最后给出温暖而有力的建议。使用流畅优美的中文。'
+            },
+            {
+                id: 'sharp',
+                name: '犀利',
+                prompt: '你是一位资深塔罗牌解读师，拥有20年占卜经验。你精通韦特塔罗、托特塔罗等多种体系。你的解读风格犀利直接、一针见血，不绕弯子、不敷衍、不刻意美化，能够精准捕捉牌面符号背后的真实问题，结合提问者的生活情境，戳破自我欺骗与逃避。解读时先清晰解读每张牌在特定牌位中的核心含义（不冗余），再综合分析整个牌阵的能量流动与核心矛盾，最后给出直接、有力、不委婉的建议，不灌鸡汤、不模糊其辞，直面问题本质。使用流畅中文，语气坚定，不拖泥带水。'
+            },
+            {
+                id: 'objective',
+                name: '客观',
+                prompt: '你是一位资深塔罗牌解读师，拥有20年占卜经验。你精通韦特塔罗、托特塔罗等多种体系。你的解读风格绝对理性、客观中立，完全摒弃主观情绪与个人偏好，不灌鸡汤、不刻意渲染吉凶，不掺杂安慰或批判。解读时先精准解读每张牌在特定牌位中的原始含义（贴合韦特/托特正统牌意），结合提问者的生活情境客观分析，再梳理整个牌阵的能量流动、利弊关系与发展趋势，最后给出中立、可行的建议，只陈述事实与可能性，不引导情绪、不主观评判。使用流畅中文，语气平和、严谨克制。'
+            },
+            {
+                id: 'concise',
+                name: '精简',
+                prompt: '你是一位资深塔罗牌解读师，拥有20年占卜经验。你精通韦特塔罗、托特塔罗等多种体系。你的解读风格极度精简、干练高效，舍去所有多余铺垫与修饰，只保留核心信息。解读时先提炼每张牌在特定牌位中的核心含义（一句话说清，不展开），再简要概括整个牌阵的能量关键与发展核心，最后给出精准、简短、可落地的建议，全程不冗余、不啰嗦，每一句都直击重点。使用流畅中文，语言凝练，无废话、不拖沓。'
+            },
+            {
+                id: 'savage',
+                name: '毒舌',
+                prompt: '你是一位资深塔罗牌解读师，拥有20年占卜经验。你精通韦特塔罗、托特塔罗等多种体系。你的解读风格毒舌尖锐、一针见血，擅长用直白甚至有点扎心的语言，点破提问者的自我欺骗、逃避与侥幸心理，不委婉、不照顾玻璃心，但解读专业、不恶意伤人。解读时先精准解读每张牌在特定牌位中的含义，结合提问者的生活情境戳中问题要害，再综合分析牌阵的能量矛盾与潜在隐患，最后给出狠辣但实用的建议，打破幻想、直面现实。使用流畅中文，语气犀利带点吐槽感，不敷衍、不讨好，只说真话。'
+            }
+        ];
+
         const AppSettings = {
             musicUrl: 'sound_effect/first_light_particles_0.wav',
             volume: parseInt(localStorage.getItem('tarot_volume') || '40', 10),
@@ -115,10 +143,16 @@
                 return auto;
             })(),
             sfxEnabled: localStorage.getItem('tarot_sfx') !== 'false',
+            readingStyle: localStorage.getItem('tarot_reading_style') || 'poetic',
             save() {
                 localStorage.setItem('tarot_volume', this.volume);
                 localStorage.setItem('tarot_particles', this.particles);
                 localStorage.setItem('tarot_sfx', this.sfxEnabled);
+                localStorage.setItem('tarot_reading_style', this.readingStyle);
+            },
+            getReadingPrompt() {
+                const style = READING_STYLES.find(s => s.id === this.readingStyle);
+                return style ? style.prompt : READING_STYLES[0].prompt;
             }
         };
 
@@ -142,6 +176,10 @@ requestAnimationFrame(animateCanvas);
         const particlesInput = document.getElementById('particlesInput');
         const clearHistoryBtn = document.getElementById('clearHistoryBtn');
         const sfxToggleBtn = document.getElementById('sfxToggleBtn');
+        const styleScrollTrack = document.getElementById('styleScrollTrack');
+        const styleScrollContainer = document.getElementById('styleScrollContainer');
+        const styleTicksTop = document.getElementById('styleTicksTop');
+        const styleTicksBottom = document.getElementById('styleTicksBottom');
 
         // --- Sound Effects ---
         const sfxCardTurn = new Audio('sound_effect/cardturn.wav');
@@ -192,6 +230,156 @@ requestAnimationFrame(animateCanvas);
             alert('历史记录已清空，请刷新页面。');
             location.reload();
         });
+
+        // --- Reading Style Selector ---
+        const STYLE_COUNT = READING_STYLES.length;
+        const STYLE_COPIES = 3;
+        const STYLE_TOTAL = STYLE_COUNT * STYLE_COPIES;
+        const STYLE_MIDDLE_OFFSET = STYLE_COUNT;
+        let styleScrollTimeout = null;
+        let styleJumping = false;
+
+        function buildStyleSelector() {
+            styleScrollTrack.innerHTML = '';
+            styleTicksTop.innerHTML = '';
+            styleTicksBottom.innerHTML = '';
+
+            const savedStyleId = AppSettings.readingStyle;
+            const savedRealIndex = READING_STYLES.findIndex(s => s.id === savedStyleId);
+            const startRealIndex = savedRealIndex >= 0 ? savedRealIndex : 0;
+
+            READING_STYLES.forEach((style, realIndex) => {
+                const tickTop = document.createElement('div');
+                tickTop.className = 'style-tick';
+                if (realIndex === startRealIndex) tickTop.classList.add('center');
+                styleTicksTop.appendChild(tickTop);
+
+                const tickBottom = document.createElement('div');
+                tickBottom.className = 'style-tick';
+                if (realIndex === startRealIndex) tickBottom.classList.add('center');
+                styleTicksBottom.appendChild(tickBottom);
+            });
+
+            for (let copy = 0; copy < STYLE_COPIES; copy++) {
+                READING_STYLES.forEach((style, realIndex) => {
+                    const chip = document.createElement('div');
+                    chip.className = 'style-chip';
+                    chip.textContent = style.name;
+                    chip.dataset.realIndex = realIndex;
+                    chip.addEventListener('click', () => selectStyle(realIndex));
+
+                    if (realIndex === startRealIndex) {
+                        chip.classList.add('active');
+                    }
+
+                    styleScrollTrack.appendChild(chip);
+                });
+            }
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    scrollToStyle(startRealIndex, 'auto');
+                });
+            });
+        }
+
+        function selectStyle(realIndex) {
+            AppSettings.readingStyle = READING_STYLES[realIndex].id;
+            AppSettings.save();
+
+            document.querySelectorAll('.style-chip').forEach(chip => {
+                const ri = parseInt(chip.dataset.realIndex);
+                chip.classList.toggle('active', ri === realIndex);
+            });
+
+            document.querySelectorAll('#styleTicksTop .style-tick').forEach((tick, i) => {
+                tick.classList.toggle('center', i === realIndex);
+            });
+            document.querySelectorAll('#styleTicksBottom .style-tick').forEach((tick, i) => {
+                tick.classList.toggle('center', i === realIndex);
+            });
+
+            scrollToStyle(realIndex, 'smooth');
+        }
+
+        function scrollToStyle(realIndex, behavior) {
+            const chips = styleScrollTrack.children;
+            if (!chips.length) return;
+            const target = chips[realIndex + STYLE_MIDDLE_OFFSET];
+            if (!target) return;
+
+            const container = styleScrollContainer;
+            const scrollLeft = target.offsetLeft - container.offsetWidth / 2 + target.offsetWidth / 2;
+            container.scrollTo({ left: Math.max(0, scrollLeft), behavior: behavior || 'smooth' });
+        }
+
+        function getClosestChipIndex() {
+            const chips = styleScrollTrack.children;
+            if (!chips.length) return 0;
+            const container = styleScrollContainer;
+            const centerX = container.scrollLeft + container.offsetWidth / 2;
+
+            let closestRaw = 0;
+            let closestDist = Infinity;
+
+            for (let i = 0; i < chips.length; i++) {
+                const chipCenter = chips[i].offsetLeft + chips[i].offsetWidth / 2;
+                const dist = Math.abs(chipCenter - centerX);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closestRaw = i;
+                }
+            }
+
+            return closestRaw;
+        }
+
+        function onStyleScrollEnd() {
+            if (styleJumping) return;
+
+            const rawIndex = getClosestChipIndex();
+            const realIndex = rawIndex % STYLE_COUNT;
+            const currentStyleId = READING_STYLES[realIndex].id;
+
+            if (currentStyleId !== AppSettings.readingStyle) {
+                AppSettings.readingStyle = currentStyleId;
+                AppSettings.save();
+
+                document.querySelectorAll('.style-chip').forEach(chip => {
+                    const ri = parseInt(chip.dataset.realIndex);
+                    chip.classList.toggle('active', ri === realIndex);
+                });
+
+                document.querySelectorAll('#styleTicksTop .style-tick').forEach((tick, i) => {
+                    tick.classList.toggle('center', i === realIndex);
+                });
+                document.querySelectorAll('#styleTicksBottom .style-tick').forEach((tick, i) => {
+                    tick.classList.toggle('center', i === realIndex);
+                });
+            }
+
+            if (rawIndex < STYLE_COUNT || rawIndex >= STYLE_COUNT * 2) {
+                styleJumping = true;
+                scrollToStyle(realIndex, 'auto');
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        styleJumping = false;
+                    });
+                });
+            }
+        }
+
+        styleScrollContainer.addEventListener('scroll', () => {
+            clearTimeout(styleScrollTimeout);
+            styleScrollTimeout = setTimeout(onStyleScrollEnd, 150);
+        }, { passive: true });
+
+        styleScrollContainer.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            styleScrollContainer.scrollLeft += e.deltaY;
+        }, { passive: false });
+
+        buildStyleSelector();
 
         // Settings Panel Toggle
         settingsBtn.addEventListener('click', (e) => {
@@ -1296,7 +1484,7 @@ requestAnimationFrame(animateCanvas);
                 return `[${c.position}] ${c.card.name} (${c.isReversed ? '逆位' : '正位'})`;
             }).join('\n');
 
-            const systemPrompt = "你是一位资深塔罗牌解读师，拥有20年占卜经验。你精通韦特塔罗、托特塔罗等多种体系。你的解读风格既专业又富有诗意，能够将牌面符号与提问者的生活情境巧妙连接。你总是先解读每张牌在特定牌位中的含义，然后综合分析整个牌阵的能量流动，最后给出温暖而有力的建议。使用流畅优美的中文。";
+            const systemPrompt = AppSettings.getReadingPrompt();
             
             const userPrompt = `请为我解读以下塔罗牌阵：
 牌阵类型：${AppState.selectedSpread.name}

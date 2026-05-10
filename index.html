@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>⚜ Tarot Divination ⚜</title>
+    <title>✨ Tarot Divination ✨</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Noto+Serif+SC:wght@300;400;600&display=swap" rel="stylesheet">
@@ -19,7 +19,7 @@
 
     <!-- Preload Screen -->
     <div id="preloadScreen" class="screen active" style="z-index: 1000; background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); top: 0; height: 100%; justify-content: center; opacity: 1; pointer-events: auto;">
-        <h1 class="main-title" style="opacity: 1; transform: none; animation: none; margin-bottom: 2rem;">⚜ Tarot Divination ⚜</h1>
+        <h1 class="main-title" style="opacity: 1; transform: none; animation: none; margin-bottom: 2rem;">✨ Tarot Divination ✨</h1>
         <div style="width: 80%; max-width: 300px; height: 4px; background: rgba(212, 168, 83, 0.2); border-radius: 2px; overflow: hidden; position: relative;">
             <div id="preloadBar" style="width: 0%; height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--color-gold), var(--color-gold-light)); transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);"></div>
         </div>
@@ -43,7 +43,7 @@
     </div>
 
     <div id="app">
-        <h1 class="main-title">⚜ Tarot Divination ⚜</h1>
+        <h1 class="main-title">✨ Tarot Divination ✨</h1>
 
         <!-- Settings Button -->
         <button id="settingsBtn" title="设置">⚙️</button>
@@ -65,6 +65,17 @@
             <div class="setting-group">
                 <label>音效</label>
                 <button id="sfxToggleBtn" class="btn" style="font-size: 0.8rem; padding: 5px 15px;">🔊 开启</button>
+            </div>
+            <div class="setting-group">
+                <label>解牌风格</label>
+                <div class="style-selector-box">
+                    <div class="style-ticks style-ticks-top" id="styleTicksTop"></div>
+                    <div class="style-scroll-container" id="styleScrollContainer">
+                        <div class="style-scroll-track" id="styleScrollTrack">
+                        </div>
+                    </div>
+                    <div class="style-ticks style-ticks-bottom" id="styleTicksBottom"></div>
+                </div>
             </div>
             <button class="btn" id="clearHistoryBtn" style="margin-top: auto;">清空历史记录</button>
         </div>
