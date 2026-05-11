@@ -234,10 +234,10 @@ requestAnimationFrame(animateCanvas);
         // --- Reading Style Selector ---
         const STYLE_COUNT = READING_STYLES.length;
         const STYLE_COPIES = 3;
-        const STYLE_TOTAL = STYLE_COUNT * STYLE_COPIES;
         const STYLE_MIDDLE_OFFSET = STYLE_COUNT;
         let styleScrollTimeout = null;
         let styleJumping = false;
+        let styleSetWidth = 0;
 
         function buildStyleSelector() {
             styleScrollTrack.innerHTML = '';
@@ -278,6 +278,10 @@ requestAnimationFrame(animateCanvas);
 
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
+                    const chips = styleScrollTrack.children;
+                    if (chips.length > STYLE_COUNT) {
+                        styleSetWidth = chips[STYLE_COUNT].offsetLeft - chips[0].offsetLeft;
+                    }
                     scrollToStyle(startRealIndex, 'auto');
                 });
             });
@@ -358,9 +362,17 @@ requestAnimationFrame(animateCanvas);
                 });
             }
 
-            if (rawIndex < STYLE_COUNT || rawIndex >= STYLE_COUNT * 2) {
+            if (rawIndex < STYLE_COUNT) {
                 styleJumping = true;
-                scrollToStyle(realIndex, 'auto');
+                styleScrollContainer.scrollBy({ left: styleSetWidth, behavior: 'auto' });
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        styleJumping = false;
+                    });
+                });
+            } else if (rawIndex >= STYLE_COUNT * 2) {
+                styleJumping = true;
+                styleScrollContainer.scrollBy({ left: -styleSetWidth, behavior: 'auto' });
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         styleJumping = false;
@@ -1308,7 +1320,7 @@ requestAnimationFrame(animateCanvas);
             
             // Generate result layout
             let resultHTML = `
-                <div class="glass-panel" style="width: 100%; max-width: 800px; padding: 30px;">
+                <div class="glass-panel" style="width: 100%; max-width: 95%; padding: 30px;">
                     <div class="corner-symbol top-left">✧</div>
                     <div class="corner-symbol top-right">✧</div>
                     <div class="corner-symbol bottom-left">✧</div>
@@ -1317,12 +1329,12 @@ requestAnimationFrame(animateCanvas);
                         <h2 class="spread-title" style="text-align: center; font-size: 2rem; margin-bottom: 20px;">解读结果</h2>
                         
                         <div id="loadingIndicator" style="text-align: center; margin: 40px 0; transition: opacity 1.2s ease, transform 1.2s ease;">
-                            <div class="magic-loading-text">
-                                <span class="desktop-text">魔法正在施展中≽^-⩊-^≼</span>
-                                <span class="mobile-text">魔法正在施展中<br>≽^-⩊-^≼</span>
+                            <div class="magic-loading-text" id="magicProgressText">
+                                <span class="desktop-text">与宇宙建立连接中...≽^-⩊-^≼</span>
+                                <span class="mobile-text">与宇宙建立连接中...<br>≽^-⩊-^≼</span>
                             </div>
                             <div style="width: 80%; max-width: 300px; height: 4px; background: rgba(212, 168, 83, 0.2); border-radius: 2px; overflow: hidden; margin: 15px auto 0; position: relative; box-shadow: inset 0 0 5px rgba(0,0,0,0.5);">
-                                <div id="magicProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, transparent, var(--color-gold), transparent); box-shadow: 0 0 10px var(--color-gold); animation: magicProgress 2s infinite ease-in-out;"></div>
+                                <div id="magicProgressBar" style="width: 0%; height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--color-gold-light), var(--color-gold), var(--color-gold-light)); box-shadow: 0 0 12px rgba(212, 168, 83, 0.6); transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);"></div>
                             </div>
                         </div>
 
@@ -1383,10 +1395,6 @@ requestAnimationFrame(animateCanvas);
                     @keyframes pulseText {
                         0% { opacity: 0.6; text-shadow: 0 0 5px rgba(212, 168, 83, 0.4); }
                         100% { opacity: 1; text-shadow: 0 0 15px rgba(212, 168, 83, 0.8); }
-                    }
-                    @keyframes magicProgress {
-                        0% { transform: translateX(-100%); width: 50%; }
-                        100% { transform: translateX(200%); width: 50%; }
                     }
                 </style>
             `;
@@ -1479,6 +1487,47 @@ requestAnimationFrame(animateCanvas);
             const loadingIndicator = document.getElementById('loadingIndicator');
             const restartBtn = document.getElementById('restartBtn');
             const resultBtnRow = document.getElementById('resultBtnRow');
+            const progressBar = document.getElementById('magicProgressBar');
+            const progressText = document.getElementById('magicProgressText');
+
+            let progressCompleted = false;
+
+            // Staged fake progress
+            const stages = [
+                { width: 20,  dt: ['与宇宙建立连接中...≽^-⩊-^≼', '与宇宙建立连接中...<br>≽^-⩊-^≼'],       delay: 0 },
+                { width: 45,  dt: ['牌灵正在低语...✨',              '牌灵正在低语...<br>✨'],                  delay: 900 },
+                { width: 70,  dt: ['在编织你的解读...🌟',            '在编织你的解读...<br>🌟'],                delay: 2400 },
+                { width: 88,  dt: ['即将揭晓...🔮',                  '即将揭晓...<br>🔮'],                      delay: 4500 },
+                { width: 95,  dt: ['星象已对齐，答案浮现...🌙',       '星象已对齐，答案浮现...<br>🌙'],           delay: 7000 },
+            ];
+            let stageIndex = 0;
+            let stageTimer = null;
+
+            function advanceStage() {
+                if (progressCompleted) return;
+                if (!progressBar || !progressText) return;
+                const stage = stages[stageIndex];
+                progressBar.style.width = stage.width + '%';
+                const isMobile = window.innerWidth <= 768;
+                progressText.innerHTML = isMobile
+                    ? '<span class="mobile-text">' + stage.dt[1] + '</span>'
+                    : '<span class="desktop-text">' + stage.dt[0] + '</span>';
+                stageIndex++;
+                if (stageIndex < stages.length) {
+                    stageTimer = setTimeout(advanceStage, stages[stageIndex].delay);
+                }
+            }
+
+            stageTimer = setTimeout(advanceStage, 400);
+
+            function completeProgress() {
+                progressCompleted = true;
+                if (stageTimer) clearTimeout(stageTimer);
+                if (progressBar) {
+                    progressBar.style.transition = 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+                    progressBar.style.width = '100%';
+                }
+            }
 
             const drawnText = AppState.drawnCards.map((c, i) => {
                 return `[${c.position}] ${c.card.name} (${c.isReversed ? '逆位' : '正位'})`;
@@ -1509,29 +1558,31 @@ ${drawnText}
                 const data = await response.json();
                 const fullText = data.choices[0].message.content;
 
-                // Smooth transition out for loading indicator
-                loadingIndicator.style.opacity = '0';
-                loadingIndicator.style.transform = 'translateY(-20px)';
-                
-                setTimeout(() => {
-                    loadingIndicator.style.display = 'none';
-                    
-                    apiContent.style.display = 'block';
-                    apiContent.innerHTML = formatAPIContent(fullText);
-                    
-                    // Trigger reflow
-                    apiContent.offsetHeight;
-                    
-                    // Smooth transition in for result content
-                    apiContent.style.opacity = '1';
-                    apiContent.style.transform = 'translateY(0)';
-                    
-                    restartBtn.style.opacity = '1';
+                completeProgress();
 
-                    resultBtnRow.style.display = 'flex';
-                    resultBtnRow.offsetHeight;
-                    resultBtnRow.style.opacity = '1';
-                }, 1200);
+                // Brief pause to show 100%, then fade out
+                setTimeout(() => {
+                    loadingIndicator.style.opacity = '0';
+                    loadingIndicator.style.transform = 'translateY(-20px)';
+                    
+                    setTimeout(() => {
+                        loadingIndicator.style.display = 'none';
+                        
+                        apiContent.style.display = 'block';
+                        apiContent.innerHTML = formatAPIContent(fullText);
+                        
+                        apiContent.offsetHeight;
+                        
+                        apiContent.style.opacity = '1';
+                        apiContent.style.transform = 'translateY(0)';
+                        
+                        restartBtn.style.opacity = '1';
+
+                        resultBtnRow.style.display = 'flex';
+                        resultBtnRow.offsetHeight;
+                        resultBtnRow.style.opacity = '1';
+                    }, 1200);
+                }, 500);
                 
                 function formatAPIContent(text) {
                     let html = text.replace(/\n/g, '<br>');
@@ -1547,12 +1598,15 @@ ${drawnText}
                 }
                 
             } catch (error) {
-                loadingIndicator.style.display = 'none';
-                apiContent.style.display = 'block';
-                apiContent.style.opacity = '1';
-                apiContent.style.transform = 'translateY(0)';
-                apiContent.innerHTML += `<br><br><span style="color: #ff6b6b;">发生错误：${error.message}</span>`;
-                resultBtnRow.style.display = 'flex';
-                resultBtnRow.style.opacity = '1';
+                completeProgress();
+                setTimeout(() => {
+                    loadingIndicator.style.display = 'none';
+                    apiContent.style.display = 'block';
+                    apiContent.style.opacity = '1';
+                    apiContent.style.transform = 'translateY(0)';
+                    apiContent.innerHTML += `<br><br><span style="color: #ff6b6b;">发生错误：${error.message}</span>`;
+                    resultBtnRow.style.display = 'flex';
+                    resultBtnRow.style.opacity = '1';
+                }, 600);
             }
         }

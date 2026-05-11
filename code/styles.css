@@ -15,6 +15,10 @@
             --danger: #d94c4c;
         }
 
+        html {
+            height: 100%;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -24,6 +28,9 @@
         body {
             margin: 0;
             padding: 0;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            height: 100%;
             background:
                 repeating-linear-gradient(0deg, transparent 0px, transparent 20px, rgba(212, 175, 55, 0.015) 20px, rgba(212, 175, 55, 0.015) 21px),
                 repeating-linear-gradient(90deg, transparent 0px, transparent 20px, rgba(212, 175, 55, 0.015) 20px, rgba(212, 175, 55, 0.015) 21px),
@@ -34,11 +41,12 @@
             font-family: var(--font-body);
             overflow: hidden;
             width: 100vw;
-            height: 100vh;
+            min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
@@ -191,7 +199,7 @@
         /* Settings Button */
         #settingsBtn {
             position: fixed;
-            top: 20px;
+            top: calc(20px + env(safe-area-inset-top));
             right: 20px;
             background: none;
             border: none;
@@ -220,7 +228,7 @@
             border-left: 1px solid var(--glass-border);
             z-index: 99;
             transition: right 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            padding: 80px 20px 20px;
+            padding: calc(80px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom));
             display: flex;
             flex-direction: column;
             gap: 20px;
@@ -258,7 +266,7 @@
         /* Author Button */
         #authorBtn {
             position: fixed;
-            top: 20px;
+            top: calc(20px + env(safe-area-inset-top));
             right: 60px;
             background: none;
             border: none;
@@ -287,7 +295,7 @@
             border-right: 1px solid var(--glass-border);
             z-index: 99;
             transition: left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            padding: 80px 20px 20px;
+            padding: calc(80px + env(safe-area-inset-top)) 20px calc(20px + env(safe-area-inset-bottom));
             display: flex;
             flex-direction: column;
             gap: 16px;
@@ -325,7 +333,7 @@
         /* Music Player */
         #musicBtn {
             position: fixed;
-            bottom: 20px;
+            bottom: calc(20px + env(safe-area-inset-bottom));
             right: 20px;
             width: 44px;
             height: 44px;
@@ -378,10 +386,12 @@
         .spread-grid {
             display: flex;
             flex-wrap: wrap;
-            gap: 20px;
+            gap: 1.2vw;
             justify-content: center;
-            max-width: 900px;
+            width: 100%;
+            max-width: 95%;
             margin-top: 40px;
+            padding: 0 10px;
         }
 
         .spread-card {
@@ -390,8 +400,8 @@
             -webkit-backdrop-filter: blur(18px);
             border: 1px solid var(--glass-border);
             border-radius: 16px;
-            padding: 20px;
-            width: 260px;
+            padding: 1.2vw 1vw;
+            width: clamp(220px, 18%, 340px);
             cursor: pointer;
             transition: var(--transition-bounce);
             opacity: 0;
@@ -436,8 +446,8 @@
             -webkit-backdrop-filter: blur(18px);
             border: 1px solid var(--glass-border);
             border-radius: 16px;
-            padding: 24px 20px;
-            width: 200px;
+            padding: 1.2vw 1vw;
+            width: clamp(180px, 14%, 260px);
             cursor: pointer;
             transition: var(--transition-bounce);
             opacity: 0;
@@ -474,10 +484,10 @@
             border-bottom: 2px solid rgba(212, 168, 83, 0.5);
             color: var(--color-white);
             font-family: var(--font-title);
-            font-size: 1.5rem;
+            font-size: clamp(1.1rem, 1.5vw, 1.5rem);
             padding: 10px;
             width: 100%;
-            max-width: 400px;
+            max-width: 90%;
             text-align: center;
             outline: none;
             transition: var(--transition-smooth);
@@ -494,9 +504,9 @@
         }
 
         .number-input {
-            width: 62px !important;
-            height: 62px;
-            max-width: 62px;
+            width: clamp(48px, 4vw, 62px) !important;
+            height: clamp(48px, 4vw, 62px);
+            max-width: clamp(48px, 4vw, 62px);
             border-radius: 20px;
             border: 2px solid rgba(212, 168, 83, 0.3) !important;
             background: var(--glass-bg);
@@ -553,8 +563,8 @@
         }
 
         .meditation-box {
-            width: 90vw;
-            max-width: 600px;
+            width: 90%;
+            max-width: 95%;
             text-align: center;
             line-height: 1.6;
             letter-spacing: 0.5px;
@@ -576,10 +586,10 @@
 
         .inputs-container {
             display: flex;
-            gap: 20px;
+            gap: 1.2vw;
             flex-wrap: wrap;
             justify-content: center;
-            max-width: 800px;
+            max-width: 95%;
         }
 
         .input-group {
@@ -719,7 +729,7 @@
 
         #drawConfirmBtn {
             position: fixed;
-            bottom: 40px;
+            bottom: calc(40px + env(safe-area-inset-bottom));
             left: 50%;
             transform: translateX(-50%);
             z-index: 30;
@@ -890,10 +900,10 @@
                 font-size: 1.8rem;
                 margin-top: 1rem;
                 position: relative;
-                top: 15px; /* Added to push title down and avoid gear icon overlap */
+                top: 15px;
             }
             .spread-grid {
-                padding-bottom: 40px; /* Added extra bottom margin for mobile system nav bars */
+                padding-bottom: calc(40px + env(safe-area-inset-bottom));
             }
             .spread-card {
                 width: 90vw;
@@ -923,12 +933,12 @@
                 right: -280px;
             }
             #settingsBtn {
-                top: 15px;
+                top: calc(15px + env(safe-area-inset-top));
                 right: 15px;
                 font-size: 20px;
             }
             #authorBtn {
-                top: 15px;
+                top: calc(15px + env(safe-area-inset-top));
                 right: 50px;
                 font-size: 18px;
             }
@@ -937,22 +947,31 @@
                 left: -280px;
             }
             #musicBtn {
-                bottom: 15px;
+                bottom: calc(15px + env(safe-area-inset-bottom));
                 right: 15px;
                 width: 36px;
                 height: 36px;
                 font-size: 16px;
             }
             #spread-layout {
-                top: 45%;
-                height: 65vh;
+                position: absolute;
+                top: 5%;
+                left: 0;
+                width: 100%;
+                height: auto;
+                min-height: 550px;
+                transform: none;
+                overflow-y: auto;
+                overflow-x: hidden;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 40px;
             }
             .layout-card-slot, .drawn-card-final {
-                width: 16vw;
-                height: calc(16vw * 1.57);
-                max-width: 70px;
-                max-height: 110px;
-                font-size: 0.6rem;
+                width: 13vw;
+                height: calc(13vw * 1.57);
+                max-width: 58px;
+                max-height: 91px;
+                font-size: 0.55rem;
             }
             .fan-card {
                 width: 80px;
@@ -964,9 +983,9 @@
                 top: 96%;
             }
             .drawn-card-final .overlay-label {
-                font-size: 0.65rem;
+                font-size: 0.6rem;
                 padding: 2px 4px;
-                bottom: -20px;
+                bottom: -18px;
             }
             .inputs-container {
                 gap: 10px;
@@ -1006,8 +1025,8 @@
             padding-bottom: 60px;
             scrollbar-width: none;
             -ms-overflow-style: none;
-            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.6) 30px, rgba(0,0,0,1) 70px);
-            mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.6) 30px, rgba(0,0,0,1) 70px);
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.3) 15px, rgba(0,0,0,1) 40px);
+            mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.3) 15px, rgba(0,0,0,1) 40px);
         }
         
         .screen::-webkit-scrollbar {
