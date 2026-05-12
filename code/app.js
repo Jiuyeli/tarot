@@ -502,6 +502,26 @@ requestAnimationFrame(animateCanvas);
             } else {
                 renderCategoryGrid();
             }
+
+            setupDonateModal();
+        }
+
+        function setupDonateModal() {
+            const donateModal = document.getElementById('donateModal');
+            if (!donateModal) return;
+
+            document.getElementById('donateTopBtn').addEventListener('click', () => {
+                document.getElementById('donatePriceText').textContent = '谢谢客官的支持≽^ ⦁ ⩊ ⦁ ^≼';
+                donateModal.style.display = 'flex';
+            });
+
+            function closeDonateModal() {
+                donateModal.style.display = 'none';
+            }
+            document.getElementById('closeDonateModal').addEventListener('click', closeDonateModal);
+            donateModal.addEventListener('click', (e) => {
+                if (e.target === donateModal) closeDonateModal();
+            });
         }
 
         // --- PC: show all spreads directly ---
@@ -515,7 +535,7 @@ requestAnimationFrame(animateCanvas);
 
             Object.entries(SPREADS).forEach(([key, spread], index) => {
                 const card = document.createElement('div');
-                card.className = 'spread-card';
+                card.className = 'spread-card liquid-glass';
                 card.innerHTML = `
                     <div class="spread-title">${spread.name}</div>
                     <div style="font-size:0.8rem;color:rgba(240,230,255,0.5);margin-bottom:8px;">${spread.cardCount} Cards</div>
@@ -562,7 +582,7 @@ requestAnimationFrame(animateCanvas);
 
             Object.entries(SPREAD_CATEGORIES).forEach(([catKey, cat], index) => {
                 const card = document.createElement('div');
-                card.className = 'category-card';
+                card.className = 'category-card liquid-glass';
                 card.innerHTML = `
                     <div class="spread-title">${cat.name}</div>
                     <div class="spread-desc">${cat.description}</div>
@@ -608,7 +628,7 @@ requestAnimationFrame(animateCanvas);
             spreadKeys.forEach((key, index) => {
                 const spread = SPREADS[key];
                 const card = document.createElement('div');
-                card.className = 'spread-card';
+                card.className = 'spread-card liquid-glass';
                 card.innerHTML = `
                     <div class="spread-title">${spread.name}</div>
                     <div style="font-size:0.8rem;color:rgba(240,230,255,0.5);margin-bottom:8px;">${spread.cardCount} Cards</div>
@@ -658,7 +678,7 @@ requestAnimationFrame(animateCanvas);
             switchScreen('screen-meditation');
             const screen = document.getElementById('screen-meditation');
             screen.innerHTML = `
-                <div class="glass-panel" style="width: 100%; max-width: 600px; display: flex; flex-direction: column; align-items: center;">
+                <div class="glass-panel liquid-glass" style="width: 100%; max-width: 600px; display: flex; flex-direction: column; align-items: center;">
                     <div class="corner-symbol top-left">✧</div>
                     <div class="corner-symbol top-right">✧</div>
                     <div class="corner-symbol bottom-left">✧</div>
@@ -689,12 +709,12 @@ requestAnimationFrame(animateCanvas);
             let inputsHTML = '';
             for (let i = 0; i < cardCount; i++) {
                 inputsHTML += `
-                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="number-input" placeholder="${i + 1}" data-index="${i}" autocomplete="off">
+                    <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" class="number-input liquid-glass" placeholder="${i + 1}" data-index="${i}" autocomplete="off">
                 `;
             }
 
             screen.innerHTML = `
-                <div class="glass-panel meditation-box" id="meditationText">
+                <div class="glass-panel meditation-box liquid-glass" id="meditationText">
                     <div class="corner-symbol top-left">✧</div>
                     <div class="corner-symbol top-right">✧</div>
                     <div class="corner-symbol bottom-left">✧</div>
@@ -1320,7 +1340,7 @@ requestAnimationFrame(animateCanvas);
             
             // Generate result layout
             let resultHTML = `
-                <div class="glass-panel" style="width: 100%; max-width: 95%; padding: 30px;">
+                <div class="glass-panel liquid-glass-strong" style="width: 100%; max-width: 95%; padding: 30px;">
                     <div class="corner-symbol top-left">✧</div>
                     <div class="corner-symbol top-right">✧</div>
                     <div class="corner-symbol bottom-left">✧</div>
@@ -1350,7 +1370,7 @@ requestAnimationFrame(animateCanvas);
 
                 <!-- Suggest Modal -->
                 <div class="modal-overlay" id="suggestModal" style="display: none;">
-                    <div class="modal-box">
+                    <div class="modal-box liquid-glass">
                         <button class="modal-close" id="closeSuggestModal">&times;</button>
                         <h3 style="color: var(--color-gold); font-family: var(--font-title); margin-bottom: 16px;">💬 匿名建议箱</h3>
                         <textarea id="suggestText" placeholder="请输入你的匿名建议" style="width: 100%; height: 140px; padding: 12px; border-radius: 10px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.06); color: var(--color-white); font-family: var(--font-body); font-size: 0.95rem; resize: vertical; outline: none;"></textarea>
@@ -1359,26 +1379,6 @@ requestAnimationFrame(animateCanvas);
                     </div>
                 </div>
 
-                <!-- Donate Modal -->
-                <div class="modal-overlay" id="donateModal" style="display: none;">
-                    <div class="modal-box">
-                        <button class="modal-close" id="closeDonateModal">&times;</button>
-                        <h3 style="color: var(--color-gold); font-family: var(--font-title); margin-bottom: 16px;">🎁 打赏作者</h3>
-                        <p style="color: var(--color-gold-light); font-size: 0.85rem; margin-bottom: 6px;">一张牌3r，两张牌5r，三张牌6r，四张牌7.2r，五张牌8r，六张牌9r，七张牌10.5r，八张牌12r，九张牌13.5r，十张牌15r</p>
-                        <p id="donatePriceText" style="color: var(--color-white); font-size: 1rem; margin-bottom: 16px; font-weight: 600;"></p>
-                        <div class="qr-row">
-                            <div class="qr-item">
-                                <img src="money/Alipay.jpg" alt="支付宝" style="width: 100%; border-radius: 10px;">
-                                <span style="color: var(--color-gold); font-size: 0.8rem; margin-top: 6px;">支付宝</span>
-                            </div>
-                            <div class="qr-item">
-                                <img src="money/WechatPay.jpg" alt="微信" style="width: 100%; border-radius: 10px;">
-                                <span style="color: var(--color-gold); font-size: 0.8rem; margin-top: 6px;">微信支付</span>
-                            </div>
-                        </div>
-                        <p style="color: rgba(245,240,255,0.55); font-size: 0.78rem; text-align: center; margin-top: 14px; line-height: 1.6;">如果打赏多一点作者谢谢谢谢老板^›⩊‹^ ੭<br>少打赏一点也没关系噢，谢谢大家支持≽^ ⦁ ⩊ ⦁ ^≼</p>
-                    </div>
-                </div>
                 <style>
                     .magic-loading-text {
                         color: var(--color-gold);
@@ -1462,7 +1462,7 @@ requestAnimationFrame(animateCanvas);
                 btn.textContent = '提交建议';
             });
 
-            // --- Donate Modal ---
+            // --- Donate Modal (result page) ---
             const donateModal = document.getElementById('donateModal');
             document.getElementById('donateBtn').addEventListener('click', () => {
                 const n = AppState.selectedSpread.cardCount;
@@ -1470,13 +1470,6 @@ requestAnimationFrame(animateCanvas);
                 const price = prices[n] || '??r';
                 document.getElementById('donatePriceText').textContent = `当前选择${n}张牌阵，建议打赏：${price}，谢谢客官光顾`;
                 donateModal.style.display = 'flex';
-            });
-            function closeDonateModal() {
-                donateModal.style.display = 'none';
-            }
-            document.getElementById('closeDonateModal').addEventListener('click', closeDonateModal);
-            donateModal.addEventListener('click', (e) => {
-                if (e.target === donateModal) closeDonateModal();
             });
 
             callDeepSeekAPI();

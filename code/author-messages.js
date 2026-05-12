@@ -33,6 +33,6 @@ const AUTHOR_MESSAGES = [
     },
     {
         q: "感谢名单",
-        a: ""
+        a: "猫猫雨 五子棋 小e 鞋领衬 小鱼ooO 87小菲 ELiKyu "
     }
 ];

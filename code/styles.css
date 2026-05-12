@@ -282,6 +282,25 @@
             text-shadow: var(--glow-shadow);
         }
 
+        /* Donate Top Button */
+        #donateTopBtn {
+            position: fixed;
+            top: calc(20px + env(safe-area-inset-top));
+            right: 100px;
+            background: none;
+            border: none;
+            color: var(--color-gold);
+            font-size: 22px;
+            cursor: pointer;
+            z-index: 100;
+            transition: var(--transition-smooth);
+        }
+
+        #donateTopBtn:hover {
+            transform: scale(1.15);
+            text-shadow: var(--glow-shadow);
+        }
+
         /* Author Panel */
         #authorPanel {
             position: fixed;
@@ -899,8 +918,8 @@
             h1.main-title {
                 font-size: 1.8rem;
                 margin-top: 1rem;
-                position: relative;
-                top: 15px;
+                max-width: calc(100% - 120px);
+                white-space: normal;
             }
             .spread-grid {
                 padding-bottom: calc(40px + env(safe-area-inset-bottom));
@@ -940,6 +959,11 @@
             #authorBtn {
                 top: calc(15px + env(safe-area-inset-top));
                 right: 50px;
+                font-size: 18px;
+            }
+            #donateTopBtn {
+                top: calc(15px + env(safe-area-inset-top));
+                right: 85px;
                 font-size: 18px;
             }
             #authorPanel {
