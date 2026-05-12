@@ -511,7 +511,14 @@ requestAnimationFrame(animateCanvas);
             if (!donateModal) return;
 
             document.getElementById('donateTopBtn').addEventListener('click', () => {
-                document.getElementById('donatePriceText').textContent = '谢谢客官的支持≽^ ⦁ ⩊ ⦁ ^≼';
+                const n = AppState.selectedSpread?.cardCount;
+                if (n) {
+                    const prices = [null, '3r', '5r', '6r', '7.2r', '8r', '9r', '10.5r', '12r', '13.5r', '15r'];
+                    const price = prices[n] || '??r';
+                    document.getElementById('donatePriceText').textContent = `当前选择${n}张牌阵，建议打赏：${price}，谢谢客官光顾`;
+                } else {
+                    document.getElementById('donatePriceText').textContent = '谢谢客官的支持≽^ ⦁ ⩊ ⦁ ^≼';
+                }
                 donateModal.style.display = 'flex';
             });
 
