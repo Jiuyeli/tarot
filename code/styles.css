@@ -916,10 +916,9 @@
         /* Mobile Adaptation */
         @media (max-width: 768px) {
             h1.main-title {
-                font-size: 1.8rem;
-                margin-top: 1rem;
-                max-width: calc(100% - 120px);
-                white-space: normal;
+                font-size: 1.3rem;
+                margin-top: 3rem;
+                white-space: nowrap;
             }
             .spread-grid {
                 padding-bottom: calc(40px + env(safe-area-inset-bottom));
