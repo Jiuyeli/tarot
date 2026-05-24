@@ -1,5 +1,5 @@
 import AlipaySdk from 'alipay-sdk';
-import { getOrder, markOrderPaid } from './_store.js';
+import { getOrder, markOrderPaid } from '../lib/store.js';
 
 const alipay = new AlipaySdk({
   appId: '2021006156661454',

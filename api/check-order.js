@@ -1,4 +1,4 @@
-import { getOrder } from './_store.js';
+import { getOrder } from '../lib/store.js';
 
 /**
  * 前端轮询接口 — 检查订单支付状态
