@@ -128,9 +128,63 @@
 
     </div>
 
-    <!-- Load order: data → background → app logic -->
+    <!-- 支付弹窗 -->
+    <div class="modal-overlay" id="payModal" style="display: none;">
+        <div class="modal-box liquid-glass pay-modal-box">
+            <button class="modal-close" id="closePayModal">&times;</button>
+            <h3 class="pay-modal-title">✨ 解锁解牌结果 ✨</h3>
+            <p id="payPriceText" class="pay-price-text">正在生成支付订单...</p>
+
+            <!-- 二维码区域 -->
+            <div id="payQRWrapper">
+                <div id="payQRLoading">⏳ 生成二维码中...</div>
+                <img id="payQRImage" src="" alt="支付宝收款码" class="pay-qr-img">
+                <canvas id="payQRCanvas" class="pay-qr-canvas"></canvas>
+            </div>
+
+            <p class="pay-subtitle">📱 请用支付宝扫描二维码完成付款</p>
+            <button class="btn pay-check-btn" id="checkPayBtn">我已付款 ✅</button>
+            <p id="payStatusText" class="pay-status-text"></p>
+        </div>
+    </div>
+
+    <!-- 打赏支付弹窗 -->
+    <div class="modal-overlay" id="donatePayModal" style="display: none;">
+        <div class="modal-box liquid-glass pay-modal-box">
+            <button class="modal-close" id="closeDonatePayModal">&times;</button>
+            <h3 class="pay-modal-title">🎁 打赏作者</h3>
+            <p id="donatePayPriceText" class="pay-price-text">谢谢客官的支持 ≽^⦁⩊⦁^≼</p>
+
+            <!-- 金额输入区 -->
+            <div id="donatePayInputArea">
+                <div class="donate-input-row">
+                    <span class="donate-currency">💰</span>
+                    <input type="number" id="donateAmountInput" class="donate-amount-input"
+                           placeholder="输入金额" min="0.01" step="0.01" autocomplete="off">
+                    <span class="donate-currency">元</span>
+                </div>
+                <p class="donate-min-hint">最低 0.01 元</p>
+                <button class="btn pay-check-btn" id="submitDonateBtn">确认打赏</button>
+            </div>
+
+            <!-- 二维码区域（初始隐藏，下单后显示） -->
+            <div id="donatePayQRArea" style="display: none;">
+                <div id="donateQRWrapper">
+                    <div id="donateQRLoading">⏳ 生成二维码中...</div>
+                    <img id="donateQRImage" src="" alt="支付宝收款码" class="pay-qr-img">
+                </div>
+                <p class="pay-subtitle">📱 请用支付宝扫描二维码完成付款</p>
+                <button class="btn pay-check-btn" id="checkDonatePayBtn">我已付款 ✅</button>
+            </div>
+
+            <p id="donatePayStatusText" class="pay-status-text"></p>
+        </div>
+    </div>
+
+    <!-- Load order: data → config → background → app logic -->
     <script src="code/tarot-data.js"></script>
     <script src="code/author-messages.js"></script>
+    <script src="code/pay-config.js"></script>
     <script src="code/starry-background.js"></script>
     <script src="code/app.js"></script>
 
