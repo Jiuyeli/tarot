@@ -11,6 +11,10 @@ export default async function handler(req, res) {
     try {
         const { systemPrompt, userPrompt } = req.body;
 
+        // 8 秒内部超时：留 2 秒给 Vercel 返回响应，避免被硬杀后客户端收到空响应
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+
         const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
             method: 'POST',
             headers: {
@@ -26,8 +30,11 @@ export default async function handler(req, res) {
                 temperature: 0.8,
                 max_tokens: 2048,
                 stream: false
-            })
+            }),
+            signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
             const errText = await response.text();
@@ -37,6 +44,9 @@ export default async function handler(req, res) {
         const data = await response.json();
         return res.status(200).json(data);
     } catch (error) {
+        if (error.name === 'AbortError') {
+            return res.status(504).json({ error: 'AI 服务响应超时，请稍后重试' });
+        }
         return res.status(500).json({ error: error.message });
     }
 }
