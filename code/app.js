@@ -1472,9 +1472,56 @@ requestAnimationFrame(animateCanvas);
             form.submit();
         }
 
-        // 页面加载时检查是否有未完成的支付（不依赖 URL 参数）
+        // 页面加载时检查是否有未完成的支付
         function checkPendingPayment() {
-            // 检查解牌支付
+            // 1. 优先检查 URL 参数（从支付页跳回时携带 ?action=pay&orderNo=xxx）
+            var urlParams = new URLSearchParams(window.location.search);
+            var action = urlParams.get('action');
+            var orderNo = urlParams.get('orderNo');
+
+            if (action && orderNo) {
+                // 清理 URL，避免刷新重复触发
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+
+                if (action === 'pay') {
+                    var payStr = localStorage.getItem('tarot_pay_state');
+                    if (payStr) {
+                        try {
+                            var state = JSON.parse(payStr);
+                            if (state.orderNo !== orderNo) return;
+                            if (Date.now() - (state.timestamp || 0) > 30 * 60 * 1000) {
+                                localStorage.removeItem('tarot_pay_state');
+                                return;
+                            }
+                            // 恢复牌阵状态
+                            if (state.spreadId) {
+                                var spread = spreads.find(function(s) { return s.id === state.spreadId; });
+                                if (spread) AppState.selectedSpread = spread;
+                            }
+                            if (state.question) {
+                                var qi = document.getElementById('questionInput');
+                                if (qi) qi.value = state.question;
+                            }
+                            if (state.selectedCards) AppState.selectedCards = state.selectedCards;
+                            window.__tarotSkipPayModal = orderNo;
+                            startResultStep();
+                            return;
+                        } catch(e) {
+                            localStorage.removeItem('tarot_pay_state');
+                        }
+                    }
+                    return;
+                }
+
+                if (action === 'donate') {
+                    pollDonateReturn(orderNo);
+                    return;
+                }
+            }
+
+            // 2. 其次检查 localStorage（用户手动回站点，无 URL 参数）
             var payStr = localStorage.getItem('tarot_pay_state');
             if (payStr) {
                 try {
@@ -1635,27 +1682,39 @@ requestAnimationFrame(animateCanvas);
 
                         donateVerifyBtn.onclick = function() {
                             donateVerifyBtn.disabled = true;
-                            donateVerifyNote.textContent = '⏳ 正在确认打赏...';
-                            donateVerifyNote.style.color = '';
-                            fetch('/api/check-order?orderNo=' + encodeURIComponent(data.orderNo))
-                                .then(r => r.json())
-                                .then(d => {
-                                    if (d.paid) {
-                                        localStorage.removeItem('tarot_pending_donate');
-                                        donateVerifyNote.textContent = '✅ 打赏成功，谢谢客官 ≽^⦁⩊⦁^≼';
-                                        donateVerifyNote.style.color = '#4caf50';
-                                        setTimeout(() => { modal.style.display = 'none'; }, 2000);
-                                    } else {
-                                        donateVerifyBtn.disabled = false;
-                                        donateVerifyNote.textContent = '⚠️ 暂未检测到打赏，请确认已付款后重试';
-                                        donateVerifyNote.style.color = '#ffa500';
-                                    }
-                                })
-                                .catch(() => {
-                                    donateVerifyBtn.disabled = false;
-                                    donateVerifyNote.textContent = '❌ 网络错误，请重试';
-                                    donateVerifyNote.style.color = '#ff6b6b';
-                                });
+                            var retries = 0;
+                            var maxRetries = 5;
+                            function tryCheck() {
+                                retries++;
+                                donateVerifyNote.textContent = '⏳ 正在确认打赏（' + retries + '/' + maxRetries + '）...';
+                                donateVerifyNote.style.color = '';
+                                fetch('/api/check-order?orderNo=' + encodeURIComponent(data.orderNo))
+                                    .then(r => r.json())
+                                    .then(d => {
+                                        if (d.paid) {
+                                            localStorage.removeItem('tarot_pending_donate');
+                                            donateVerifyNote.textContent = '✅ 打赏成功，谢谢客官 ≽^⦁⩊⦁^≼';
+                                            donateVerifyNote.style.color = '#4caf50';
+                                            setTimeout(() => { modal.style.display = 'none'; }, 2000);
+                                        } else if (retries < maxRetries) {
+                                            setTimeout(tryCheck, 2000);
+                                        } else {
+                                            donateVerifyBtn.disabled = false;
+                                            donateVerifyNote.textContent = '⚠️ 多次检测未成功，请确认已付款后重试';
+                                            donateVerifyNote.style.color = '#ffa500';
+                                        }
+                                    })
+                                    .catch(() => {
+                                        if (retries < maxRetries) {
+                                            setTimeout(tryCheck, 2000);
+                                        } else {
+                                            donateVerifyBtn.disabled = false;
+                                            donateVerifyNote.textContent = '❌ 网络错误，请重试';
+                                            donateVerifyNote.style.color = '#ff6b6b';
+                                        }
+                                    });
+                            }
+                            tryCheck();
                         };
                     })
                     .catch(err => {
@@ -1799,31 +1858,43 @@ requestAnimationFrame(animateCanvas);
 
                     payVerifyBtn.onclick = function() {
                         payVerifyBtn.disabled = true;
-                        payVerifyNote.textContent = '⏳ 正在确认支付，请耐心等待...';
-                        payVerifyNote.style.color = '';
-                        fetch('/api/check-order?orderNo=' + encodeURIComponent(data.orderNo))
-                            .then(r => r.json())
-                            .then(d => {
-                                if (d.paid) {
-                                    localStorage.removeItem('tarot_pay_state');
-                                    payVerifyNote.textContent = '✅ 支付成功！正在生成解牌结果...';
-                                    payVerifyNote.style.color = '#4caf50';
-                                    document.getElementById('closePayModal').style.pointerEvents = 'none';
-                                    setTimeout(() => {
-                                        payModal.style.display = 'none';
-                                        callDeepSeekAPI();
-                                    }, 1500);
-                                } else {
-                                    payVerifyBtn.disabled = false;
-                                    payVerifyNote.textContent = '⚠️ 暂未检测到支付，请确认已付款后重试';
-                                    payVerifyNote.style.color = '#ffa500';
-                                }
-                            })
-                            .catch(() => {
-                                payVerifyBtn.disabled = false;
-                                payVerifyNote.textContent = '❌ 网络错误，请重试';
-                                payVerifyNote.style.color = '#ff6b6b';
-                            });
+                        var retries = 0;
+                        var maxRetries = 5;
+                        function tryCheck() {
+                            retries++;
+                            payVerifyNote.textContent = '⏳ 正在确认支付（' + retries + '/' + maxRetries + '）...';
+                            payVerifyNote.style.color = '';
+                            fetch('/api/check-order?orderNo=' + encodeURIComponent(data.orderNo))
+                                .then(r => r.json())
+                                .then(d => {
+                                    if (d.paid) {
+                                        localStorage.removeItem('tarot_pay_state');
+                                        payVerifyNote.textContent = '✅ 支付成功！正在生成解牌结果...';
+                                        payVerifyNote.style.color = '#4caf50';
+                                        document.getElementById('closePayModal').style.pointerEvents = 'none';
+                                        setTimeout(() => {
+                                            payModal.style.display = 'none';
+                                            callDeepSeekAPI();
+                                        }, 1500);
+                                    } else if (retries < maxRetries) {
+                                        setTimeout(tryCheck, 2000);
+                                    } else {
+                                        payVerifyBtn.disabled = false;
+                                        payVerifyNote.textContent = '⚠️ 多次检测未成功，请确认已付款后重试';
+                                        payVerifyNote.style.color = '#ffa500';
+                                    }
+                                })
+                                .catch(() => {
+                                    if (retries < maxRetries) {
+                                        setTimeout(tryCheck, 2000);
+                                    } else {
+                                        payVerifyBtn.disabled = false;
+                                        payVerifyNote.textContent = '❌ 网络错误，请重试';
+                                        payVerifyNote.style.color = '#ff6b6b';
+                                    }
+                                });
+                        }
+                        tryCheck();
                     };
                 })
                 .catch(err => {
