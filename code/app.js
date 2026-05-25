@@ -1642,6 +1642,10 @@ requestAnimationFrame(animateCanvas);
                 payVerifyNote.textContent = '';
                 payModal.style.display = 'flex';
 
+                document.getElementById('closePayModal').onclick = () => {
+                    payModal.style.display = 'none';
+                };
+
                 payVerifyBtn.onclick = function() {
                     payVerifyBtn.disabled = true;
                     payVerifyNote.textContent = '⏳ 正在确认支付，请耐心等待...';
