@@ -83,8 +83,11 @@ export default async function handler(req, res) {
     const bizResp = result.alipay_trade_precreate_response;
     if (!bizResp) {
       const errResp = result.error_response;
-      console.error('[pay] 支付宝业务错误:', JSON.stringify(errResp || result));
-      return res.json({ ok: false, msg: (errResp && errResp.sub_msg) || (errResp && errResp.msg) || '支付宝接口异常' });
+      // 临时调试：输出原始返回的关键字段
+      const keys = Object.keys(result || {});
+      const debug = keys.length ? ('[key:' + keys.join(',') + ']') : '[empty]';
+      console.error('[pay] 支付宝返回解析失败:', debug, JSON.stringify(result).substring(0, 500));
+      return res.json({ ok: false, msg: (errResp && (errResp.sub_msg || errResp.msg)) || ('支付宝返回异常 ' + debug) });
     }
 
     if (bizResp.code !== '10000') {
