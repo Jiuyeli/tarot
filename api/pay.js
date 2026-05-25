@@ -80,22 +80,17 @@ export default async function handler(req, res) {
     });
 
     // 检查支付宝是否返回了业务错误
-    const bizResp = result.alipay_trade_precreate_response;
-    if (!bizResp) {
-      const errResp = result.error_response;
-      // 临时调试：输出原始返回的关键字段
-      const keys = Object.keys(result || {});
-      const debug = keys.length ? ('[key:' + keys.join(',') + ']') : '[empty]';
-      console.error('[pay] 支付宝返回解析失败:', debug, JSON.stringify(result).substring(0, 500));
-      return res.json({ ok: false, msg: (errResp && (errResp.sub_msg || errResp.msg)) || ('支付宝返回异常 ' + debug) });
+    // 新版 alipay-sdk 返回扁平结构：成功时 { ...alipay_trade_precreate_response }，失败时 { code, msg, subCode, subMsg }
+    if (result.code && result.code !== '10000') {
+      console.error('[pay] 支付宝业务错误:', result.code, result.sub_msg || result.msg);
+      return res.json({ ok: false, msg: result.sub_msg || result.msg || result.code });
     }
 
-    if (bizResp.code !== '10000') {
-      console.error('[pay] 支付宝业务错误:', bizResp.code, bizResp.sub_msg || bizResp.msg);
-      return res.json({ ok: false, msg: bizResp.sub_msg || bizResp.msg || bizResp.code });
+    const qrCode = result.qr_code;
+    if (!qrCode) {
+      console.error('[pay] 支付宝返回无 qr_code:', JSON.stringify(result).substring(0, 500));
+      return res.json({ ok: false, msg: '二维码生成失败：' + (result.sub_msg || result.msg || '未知错误') });
     }
-
-    const qrCode = bizResp.qr_code;
 
     res.json({
       ok: true,
