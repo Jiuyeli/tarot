@@ -213,6 +213,41 @@ requestAnimationFrame(animateCanvas);
         // Apply settings
         bgMusic.volume = AppSettings.volume / 100;
 
+        // 恢复上次播放位置，避免刷新时音乐从零开始
+        (function() {
+            var savedTime = parseFloat(localStorage.getItem('tarot_music_time') || '0');
+            if (savedTime > 0) {
+                var onReady = function() {
+                    if (bgMusic.duration && savedTime < bgMusic.duration - 1) {
+                        bgMusic.currentTime = savedTime;
+                    }
+                };
+                bgMusic.addEventListener('loadedmetadata', onReady, { once: true });
+                // 如果已经加载完了，直接设置
+                if (bgMusic.readyState >= 1) {
+                    setTimeout(function() {
+                        if (bgMusic.duration && savedTime < bgMusic.duration - 1) {
+                            bgMusic.currentTime = savedTime;
+                        }
+                    }, 100);
+                }
+            }
+            if (localStorage.getItem('tarot_music_playing') === 'true') {
+                bgMusic.play().catch(function() {});
+                musicBtn.classList.add('playing');
+            }
+        })();
+
+        // 页面卸载前保存播放位置
+        window.addEventListener('beforeunload', function() {
+            if (!bgMusic.paused && bgMusic.currentTime > 0) {
+                localStorage.setItem('tarot_music_time', bgMusic.currentTime);
+                localStorage.setItem('tarot_music_playing', 'true');
+            } else if (bgMusic.paused) {
+                localStorage.setItem('tarot_music_playing', 'false');
+            }
+        });
+
         // Event Listeners for Settings
         volumeInput.addEventListener('input', (e) => { 
             AppSettings.volume = e.target.value; 
@@ -2079,5 +2114,11 @@ ${drawnText}
             }
         }
 
-        // 页面加载时检查是否从支付页面返回
-        checkPendingPayment();
+        // 页面加载时检查是否从支付页面返回（延迟到 initApp 之后，避免 DOM 冲突）
+        setTimeout(function() {
+            try {
+                checkPendingPayment();
+            } catch(e) {
+                console.error('checkPendingPayment error:', e);
+            }
+        }, 500);
