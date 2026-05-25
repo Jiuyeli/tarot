@@ -1563,7 +1563,7 @@ requestAnimationFrame(animateCanvas);
                 const title = '塔罗牌打赏';
 
                 function donateWithType(type) {
-                    statusText.textContent = '⏳ 正在跳转到支付页面...';
+                    statusText.textContent = '⏳ 正在跳转到支付页面，请耐心等待...';
                     statusText.style.color = '';
                     fetch('/api/pay', {
                         method: 'POST',
@@ -1626,7 +1626,7 @@ requestAnimationFrame(animateCanvas);
 
             // 支付宝 / 微信 按钮点击 → 下单 + 跳转
             function payWithType(type) {
-                payStatusText.textContent = '⏳ 正在跳转到支付页面...';
+                payStatusText.textContent = '⏳ 正在跳转到支付页面，请耐心等待...';
                 payStatusText.style.color = '';
 
                 fetch('/api/pay', {
