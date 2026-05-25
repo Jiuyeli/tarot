@@ -1587,6 +1587,10 @@ requestAnimationFrame(animateCanvas);
                 function donateWithType(type) {
                     statusText.textContent = '⏳ 正在打开支付页面，请耐心等待...';
                     statusText.style.color = '';
+
+                    // 先在点击同步上下文中打开空窗口（避免浏览器弹窗拦截）
+                    var donateWin = window.open('', '_blank');
+
                     fetch('/api/pay', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -1595,6 +1599,7 @@ requestAnimationFrame(animateCanvas);
                     .then(res => res.json())
                     .then(data => {
                         if (!data.ok) {
+                            if (donateWin) donateWin.close();
                             statusText.textContent = '❌ 下单失败：' + (data.msg || '请重试');
                             statusText.style.color = '#ff6b6b';
                             return;
@@ -1604,8 +1609,20 @@ requestAnimationFrame(animateCanvas);
                             orderNo: data.orderNo,
                             timestamp: Date.now()
                         }));
-                        // 新窗口打开支付
-                        submitPayForm(data.submitUrl, data.params, '_blank');
+
+                        // 往新窗口写表单并自动提交
+                        if (donateWin) {
+                            var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>';
+                            html += '<form id="_pf" action="' + data.submitUrl + '" method="post">';
+                            for (var k in data.params) {
+                                html += '<input type="hidden" name="' + k + '" value="' + String(data.params[k]).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '">';
+                            }
+                            html += '</form>';
+                            html += '<scr' + 'ipt>document.getElementById("_pf").submit();</scr' + 'ipt>';
+                            html += '</body></html>';
+                            donateWin.document.write(html);
+                            donateWin.document.close();
+                        }
 
                         // 显示打赏验证按钮
                         methodArea.style.display = 'none';
@@ -1731,6 +1748,9 @@ requestAnimationFrame(animateCanvas);
                 payStatusText.textContent = '⏳ 正在打开支付页面，请耐心等待...';
                 payStatusText.style.color = '';
 
+                // 先在点击同步上下文中打开空窗口（避免浏览器弹窗拦截）
+                var payWin = window.open('', '_blank');
+
                 fetch('/api/pay', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1739,6 +1759,7 @@ requestAnimationFrame(animateCanvas);
                 .then(res => res.json())
                 .then(data => {
                     if (!data.ok) {
+                        if (payWin) payWin.close();
                         payStatusText.textContent = '❌ 下单失败：' + (data.msg || '请重试');
                         payStatusText.style.color = '#ff6b6b';
                         return;
@@ -1753,8 +1774,19 @@ requestAnimationFrame(animateCanvas);
                         timestamp: Date.now()
                     }));
 
-                    // 新窗口打开支付页面，原页面保留不动
-                    submitPayForm(data.submitUrl, data.params, '_blank');
+                    // 往新窗口写表单并自动提交
+                    if (payWin) {
+                        var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body>';
+                        html += '<form id="_pf" action="' + data.submitUrl + '" method="post">';
+                        for (var k in data.params) {
+                            html += '<input type="hidden" name="' + k + '" value="' + String(data.params[k]).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '">';
+                        }
+                        html += '</form>';
+                        html += '<scr' + 'ipt>document.getElementById("_pf").submit();</scr' + 'ipt>';
+                        html += '</body></html>';
+                        payWin.document.write(html);
+                        payWin.document.close();
+                    }
 
                     // 立刻显示「我已支付成功」验证按钮
                     payMethodArea.style.display = 'none';
@@ -1795,6 +1827,7 @@ requestAnimationFrame(animateCanvas);
                     };
                 })
                 .catch(err => {
+                    if (payWin) payWin.close();
                     payStatusText.textContent = '❌ 网络错误：' + err.message;
                     payStatusText.style.color = '#ff6b6b';
                 });
