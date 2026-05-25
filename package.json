@@ -1,11 +1,5 @@
 {
   "name": "tarot",
   "private": true,
-  "type": "module",
-  "engines": {
-    "node": "24"
-  },
-  "dependencies": {
-    "alipay-sdk": "^3.6.0"
-  }
+  "type": "module"
 }
