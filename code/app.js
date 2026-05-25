@@ -1471,49 +1471,70 @@ requestAnimationFrame(animateCanvas);
             form.submit();
         }
 
-        // 页面加载时检查是否从支付页面返回
-        function checkReturnPayment() {
-            var urlParams = new URLSearchParams(window.location.search);
-            var action = urlParams.get('action');
-            var orderNo = urlParams.get('orderNo');
-            if (!action || !orderNo) return;
-
-            if (window.history && window.history.replaceState) {
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-
-            if (action === 'pay') {
-                var savedStr = sessionStorage.getItem('tarot_pay_state');
-                if (!savedStr) return;
+        // 页面加载时检查是否有未完成的支付（不依赖 URL 参数）
+        function checkPendingPayment() {
+            // 检查解牌支付
+            var payStr = localStorage.getItem('tarot_pay_state');
+            if (payStr) {
                 try {
-                    var state = JSON.parse(savedStr);
-                    if (state.orderNo !== orderNo) return;
-                    if (state.spreadId) {
-                        var spread = spreads.find(function(s) { return s.id === state.spreadId; });
-                        if (spread) AppState.selectedSpread = spread;
+                    var state = JSON.parse(payStr);
+                    if (Date.now() - (state.timestamp || 0) > 30 * 60 * 1000) {
+                        localStorage.removeItem('tarot_pay_state');
+                    } else {
+                        // 恢复牌阵状态
+                        if (state.spreadId) {
+                            var spread = spreads.find(function(s) { return s.id === state.spreadId; });
+                            if (spread) AppState.selectedSpread = spread;
+                        }
+                        if (state.question) {
+                            var qi = document.getElementById('questionInput');
+                            if (qi) qi.value = state.question;
+                        }
+                        if (state.selectedCards) AppState.selectedCards = state.selectedCards;
+                        window.__tarotSkipPayModal = state.orderNo;
+                        startResultStep();
+                        return;
                     }
-                    if (state.question) {
-                        var qi = document.getElementById('questionInput');
-                        if (qi) qi.value = state.question;
-                    }
-                    if (state.selectedCards) AppState.selectedCards = state.selectedCards;
-                    window.__tarotSkipPayModal = orderNo;
-                    startResultStep();
-                    sessionStorage.removeItem('tarot_pay_state');
-                } catch(e) {}
-            } else if (action === 'donate') {
-                var pollTimer = setInterval(function() {
-                    fetch('/api/check-order?orderNo=' + encodeURIComponent(orderNo))
-                        .then(function(r) { return r.json(); })
-                        .then(function(d) {
-                            if (d.paid) {
-                                clearInterval(pollTimer);
-                                alert('打赏成功，谢谢客官');
-                            }
-                        });
-                }, 2000);
-                setTimeout(function() { clearInterval(pollTimer); }, 60000);
+                } catch(e) {
+                    localStorage.removeItem('tarot_pay_state');
+                }
             }
+
+            // 检查打赏支付
+            var donateStr = localStorage.getItem('tarot_pending_donate');
+            if (donateStr) {
+                try {
+                    var ds = JSON.parse(donateStr);
+                    if (Date.now() - (ds.timestamp || 0) > 30 * 60 * 1000) {
+                        localStorage.removeItem('tarot_pending_donate');
+                    } else {
+                        pollDonateReturn(ds.orderNo);
+                    }
+                } catch(e) {
+                    localStorage.removeItem('tarot_pending_donate');
+                }
+            }
+        }
+
+        function pollDonateReturn(orderNo) {
+            var tries = 0;
+            function check() {
+                tries++;
+                fetch('/api/check-order?orderNo=' + encodeURIComponent(orderNo))
+                    .then(function(r) { return r.json(); })
+                    .then(function(d) {
+                        if (d.paid) {
+                            localStorage.removeItem('tarot_pending_donate');
+                            alert('✅ 打赏成功，谢谢客官 ≽^⦁⩊⦁^≼');
+                        } else if (tries < 30) {
+                            setTimeout(check, 2000);
+                        }
+                    })
+                    .catch(function() {
+                        if (tries < 30) setTimeout(check, 2000);
+                    });
+            }
+            check();
         }
 
         // ========== 打赏支付流程 ==========
@@ -1578,6 +1599,11 @@ requestAnimationFrame(animateCanvas);
                             return;
                         }
                         submitPayForm(data.submitUrl, data.params);
+                        // 保存待支付标记，用户回来后自动检测
+                        localStorage.setItem('tarot_pending_donate', JSON.stringify({
+                            orderNo: data.orderNo,
+                            timestamp: Date.now()
+                        }));
                     })
                     .catch(err => {
                         statusText.textContent = '❌ 网络错误：' + err.message;
@@ -1642,12 +1668,13 @@ requestAnimationFrame(animateCanvas);
                         return;
                     }
 
-                    // 保存状态到 sessionStorage，支付回来后恢复
-                    sessionStorage.setItem('tarot_pay_state', JSON.stringify({
+                    // 保存状态到 localStorage，回来时自动恢复
+                    localStorage.setItem('tarot_pay_state', JSON.stringify({
                         orderNo: data.orderNo,
                         spreadId: AppState.selectedSpread?.id,
                         question: document.getElementById('questionInput')?.value || '',
-                        selectedCards: AppState.selectedCards || []
+                        selectedCards: AppState.selectedCards || [],
+                        timestamp: Date.now()
                     }));
 
                     submitPayForm(data.submitUrl, data.params);
@@ -1678,6 +1705,7 @@ requestAnimationFrame(animateCanvas);
                     .then(res => res.json())
                     .then(data => {
                         if (data.paid) {
+                            localStorage.removeItem('tarot_pay_state');
                             payStatusText.textContent = '✅ 支付成功！正在获取解牌结果...';
                             payStatusText.style.color = '#4caf50';
                             document.getElementById('closePayModal').style.pointerEvents = 'none';
@@ -1869,4 +1897,4 @@ ${drawnText}
         }
 
         // 页面加载时检查是否从支付页面返回
-        checkReturnPayment();
+        checkPendingPayment();
