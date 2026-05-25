@@ -84,13 +84,10 @@ export default async function handler(req, res) {
 
     const result = await resp.json();
 
-    if (result.code === 200) {
-      res.json({
-        ok: true,
-        qrCode: result.code_url || result.qrcode,
-        orderNo,
-        price: numPrice,
-      });
+    // 易支付有时 code 不是 200 但已经返回了二维码
+    const qrCode = result.code_url || result.qrcode;
+    if (result.code === 200 || result.code === 1 || qrCode) {
+      res.json({ ok: true, qrCode, orderNo, price: numPrice });
     } else {
       console.error('[pay] 易支付下单失败:', result.code, result.msg);
       res.json({ ok: false, msg: result.msg || `下单失败 (${result.code})` });
