@@ -5,7 +5,7 @@ import { createOrder, generateOrderNo } from '../lib/store.js';
 const PAY_CONFIG = {
   pid: '3995',
   key: 'eMuHaThDYh3vGDRSsLgQyw5Oq32IcOBg',
-  gateway: 'https://www.ezfpy.cn/mapi.php',
+  submit_url: 'https://www.ezfpy.cn/submit.php',
   notify_url: 'https://www.starot.xyz/api/notify',
 };
 
@@ -23,27 +23,25 @@ function getSignString(params) {
   return Object.keys(filtered).sort().map(k => `${k}=${filtered[k]}`).join('&');
 }
 
-/**
- * MD5 签名
- */
 function md5(str) {
   return crypto.createHash('md5').update(str, 'utf8').digest('hex');
 }
 
 /**
- * 创建支付订单
- * POST /api/pay  body: { price, title }
+ * 创建跳转支付订单
+ * POST /api/pay  body: { price, title, type }
  *
- * 协议不变：{ ok: true, qrCode, orderNo, price } | { ok: false, msg }
+ * type: 'alipay' | 'wxpay'
+ * 返回签名好的参数，前端自行构建表单 POST 到 submit.php
  */
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ ok: false, msg: 'Method not allowed' });
   }
 
-  const { price, title } = req.body;
-  if (!price || !title) {
-    return res.status(400).json({ ok: false, msg: '缺少 price 或 title 参数' });
+  const { price, title, type } = req.body;
+  if (!price || !title || !type) {
+    return res.status(400).json({ ok: false, msg: '缺少 price、title 或 type 参数' });
   }
 
   const numPrice = parseFloat(price);
@@ -55,45 +53,35 @@ export default async function handler(req, res) {
   const orderNo = generateOrderNo();
 
   try {
-    // 存储订单
     createOrder(orderNo, priceInCent, title);
 
-    // 构造支付参数
+    // 支付成功后跳回站点，附上 orderNo 供前端检测
+    const action = (title === '塔罗牌打赏') ? 'donate' : 'pay';
+    const returnUrl = `https://www.starot.xyz/?action=${action}&orderNo=${orderNo}`;
+
     const payParams = {
       pid: PAY_CONFIG.pid,
-      type: 'alipay',
+      type,
       out_trade_no: orderNo,
       notify_url: PAY_CONFIG.notify_url,
-      return_url: 'https://www.starot.xyz',
+      return_url: returnUrl,
       name: title,
       money: numPrice.toFixed(2),
     };
 
-    // MD5 签名
     const signStr = getSignString(payParams);
     payParams.sign = md5(signStr + PAY_CONFIG.key);
     payParams.sign_type = 'MD5';
 
-    // POST to 易支付
-    const bodyParams = new URLSearchParams(payParams).toString();
-    const resp = await fetch(PAY_CONFIG.gateway, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: bodyParams,
+    res.json({
+      ok: true,
+      submitUrl: PAY_CONFIG.submit_url,
+      params: payParams,
+      orderNo,
+      price: numPrice,
     });
-
-    const result = await resp.json();
-
-    // 易支付有时 code 不是 200 但已经返回了二维码
-    const qrCode = result.code_url || result.qrcode;
-    if (result.code === 200 || result.code === 1 || qrCode) {
-      res.json({ ok: true, qrCode, orderNo, price: numPrice });
-    } else {
-      console.error('[pay] 易支付下单失败:', result.code, result.msg);
-      res.json({ ok: false, msg: result.msg || `下单失败 (${result.code})` });
-    }
   } catch (err) {
     console.error('[pay] 异常:', err.message);
-    res.json({ ok: false, msg: err.message });
+    res.status(500).json({ ok: false, msg: err.message });
   }
 }

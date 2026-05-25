@@ -1269,6 +1269,48 @@
             width: 200px; height: 200px;
         }
 
+        /* Payment Method Buttons (replaces QR) */
+        .pay-method-hint {
+            color: rgba(240,230,255,0.6);
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+        }
+        .pay-method-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .pay-type-btn {
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 140px;
+        }
+        .alipay-btn {
+            background: linear-gradient(135deg, #1677ff, #0958d9);
+            color: #fff;
+            border-color: rgba(22, 119, 255, 0.4);
+        }
+        .alipay-btn:hover {
+            box-shadow: 0 0 18px rgba(22, 119, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        .wxpay-btn {
+            background: linear-gradient(135deg, #07c160, #06ad56);
+            color: #fff;
+            border-color: rgba(7, 193, 96, 0.4);
+        }
+        .wxpay-btn:hover {
+            box-shadow: 0 0 18px rgba(7, 193, 96, 0.5);
+            transform: translateY(-2px);
+        }
+
         /* Donate Payment Modal */
         .donate-input-row {
             display: flex;
@@ -1379,6 +1421,11 @@
             .pay-subtitle {
                 font-size: 0.75rem;
                 margin-bottom: 12px;
+            }
+            .pay-type-btn {
+                padding: 12px 20px;
+                font-size: 0.9rem;
+                min-width: 120px;
             }
             #payQRWrapper {
                 width: 180px; height: 180px;

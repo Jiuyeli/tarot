@@ -134,16 +134,15 @@
             <h3 class="pay-modal-title">✨ 解锁解牌结果 ✨</h3>
             <p id="payPriceText" class="pay-price-text">正在生成支付订单...</p>
 
-            <!-- 二维码区域 -->
-            <div id="payQRWrapper">
-                <div id="payQRLoading">⏳ 生成二维码中...</div>
-                <img id="payQRImage" src="" alt="支付宝收款码" class="pay-qr-img">
-                <canvas id="payQRCanvas" class="pay-qr-canvas"></canvas>
+            <!-- 支付方式选择（下单后显示） -->
+            <div id="payMethodArea" style="display: none;">
+                <p class="pay-method-hint">请选择支付方式</p>
+                <div class="pay-method-buttons">
+                    <button class="btn pay-type-btn alipay-btn" id="payAlipayBtn" data-type="alipay">💙 支付宝支付</button>
+                    <button class="btn pay-type-btn wxpay-btn" id="payWxpayBtn" data-type="wxpay">💚 微信支付</button>
+                </div>
+                <p id="payStatusText" class="pay-status-text"></p>
             </div>
-
-            <p class="pay-subtitle">📱 请扫描二维码完成付款</p>
-            <button class="btn pay-check-btn" id="checkPayBtn">我已付款 ✅</button>
-            <p id="payStatusText" class="pay-status-text"></p>
         </div>
     </div>
 
@@ -166,14 +165,13 @@
                 <button class="btn pay-check-btn" id="submitDonateBtn">确认打赏</button>
             </div>
 
-            <!-- 二维码区域（初始隐藏，下单后显示） -->
-            <div id="donatePayQRArea" style="display: none;">
-                <div id="donateQRWrapper">
-                    <div id="donateQRLoading">⏳ 生成二维码中...</div>
-                    <img id="donateQRImage" src="" alt="支付宝收款码" class="pay-qr-img">
+            <!-- 支付方式选择（下单后显示） -->
+            <div id="donatePayMethodArea" style="display: none;">
+                <p class="pay-method-hint">请选择支付方式</p>
+                <div class="pay-method-buttons">
+                    <button class="btn pay-type-btn alipay-btn" id="donateAlipayBtn" data-type="alipay">💙 支付宝支付</button>
+                    <button class="btn pay-type-btn wxpay-btn" id="donateWxpayBtn" data-type="wxpay">💚 微信支付</button>
                 </div>
-                <p class="pay-subtitle">📱 请扫描二维码完成付款</p>
-                <button class="btn pay-check-btn" id="checkDonatePayBtn">我已付款 ✅</button>
             </div>
 
             <p id="donatePayStatusText" class="pay-status-text"></p>

@@ -1453,82 +1453,94 @@ requestAnimationFrame(animateCanvas);
         }
 
         // ========== 支付流程 ==========
-        let payPollTimer = null;
-        let payPollCount = 0;
-        let payBackoffCount = 0;        // 指数退避计数
-        let payPollCurrentInterval = POLL_CONFIG.INTERVAL;
-        let payVisibilityPaused = false; // 页面隐藏时暂停
 
-        // 页面隐藏/显示 时暂停/恢复轮询
-        document.addEventListener('visibilitychange', () => {
-            if (!window.__tarotCurrentOrder) return;
-            const payModal = document.getElementById('payModal');
-            if (!payModal || payModal.style.display === 'none') return;
-
-            if (document.hidden) {
-                if (payPollTimer) {
-                    clearTimeout(payPollTimer);
-                    payPollTimer = null;
-                    payVisibilityPaused = true;
-                }
-            } else if (payVisibilityPaused) {
-                payVisibilityPaused = false;
-                payPollCurrentInterval = POLL_CONFIG.INTERVAL;
-                payBackoffCount = 0;
-                // 恢复时立即检查一次
-                pollPaymentStatus(window.__tarotCurrentOrder);
+        // 构建隐藏表单并提交到易支付（跳转支付）
+        function submitPayForm(submitUrl, params) {
+            const form = document.createElement('form');
+            form.action = submitUrl;
+            form.method = 'post';
+            form.style.display = 'none';
+            for (const key in params) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = Array.isArray(params[key]) ? params[key].join(',') : params[key];
+                form.appendChild(input);
             }
-        });
+            document.body.appendChild(form);
+            form.submit();
+        }
 
-        // 页面刷新/关闭时停止轮询
-        window.addEventListener('beforeunload', () => {
-            stopPayPolling();
-            stopDonatePolling();
-        });
+        // 页面加载时检查是否从支付页面返回
+        function checkReturnPayment() {
+            var urlParams = new URLSearchParams(window.location.search);
+            var action = urlParams.get('action');
+            var orderNo = urlParams.get('orderNo');
+            if (!action || !orderNo) return;
 
-        // ========== 打赏支付流程（独立轮询，不复用解牌轮询） ==========
-        let donatePollTimer = null;
-        let donatePollCount = 0;
-        let donateBackoffCount = 0;
-        let donatePollInterval = POLL_CONFIG.INTERVAL;
+            if (window.history && window.history.replaceState) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            if (action === 'pay') {
+                var savedStr = sessionStorage.getItem('tarot_pay_state');
+                if (!savedStr) return;
+                try {
+                    var state = JSON.parse(savedStr);
+                    if (state.orderNo !== orderNo) return;
+                    if (state.spreadId) {
+                        var spread = spreads.find(function(s) { return s.id === state.spreadId; });
+                        if (spread) AppState.selectedSpread = spread;
+                    }
+                    if (state.question) {
+                        var qi = document.getElementById('questionInput');
+                        if (qi) qi.value = state.question;
+                    }
+                    if (state.selectedCards) AppState.selectedCards = state.selectedCards;
+                    window.__tarotSkipPayModal = orderNo;
+                    startResultStep();
+                    sessionStorage.removeItem('tarot_pay_state');
+                } catch(e) {}
+            } else if (action === 'donate') {
+                var pollTimer = setInterval(function() {
+                    fetch('/api/check-order?orderNo=' + encodeURIComponent(orderNo))
+                        .then(function(r) { return r.json(); })
+                        .then(function(d) {
+                            if (d.paid) {
+                                clearInterval(pollTimer);
+                                alert('打赏成功，谢谢客官');
+                            }
+                        });
+                }, 2000);
+                setTimeout(function() { clearInterval(pollTimer); }, 60000);
+            }
+        }
+
+        // ========== 打赏支付流程 ==========
 
         function showDonatePayModal() {
             const modal = document.getElementById('donatePayModal');
             const inputArea = document.getElementById('donatePayInputArea');
-            const qrArea = document.getElementById('donatePayQRArea');
+            const methodArea = document.getElementById('donatePayMethodArea');
             const amountInput = document.getElementById('donateAmountInput');
             const statusText = document.getElementById('donatePayStatusText');
-            const qrImage = document.getElementById('donateQRImage');
-            const qrLoading = document.getElementById('donateQRLoading');
 
             if (!modal) return;
 
-            // 重置 UI
             inputArea.style.display = 'block';
-            qrArea.style.display = 'none';
+            methodArea.style.display = 'none';
             amountInput.value = '';
             statusText.textContent = '';
             statusText.style.color = '';
-            qrImage.style.display = 'none';
-            qrLoading.style.display = 'block';
             modal.style.display = 'flex';
 
-            // 停止上一轮打赏轮询
-            stopDonatePolling();
-
-            // 关闭按钮
             document.getElementById('closeDonatePayModal').onclick = () => {
-                stopDonatePolling();
                 modal.style.display = 'none';
             };
             modal.onclick = (e) => {
-                if (e.target === modal) {
-                    stopDonatePolling();
-                    modal.style.display = 'none';
-                }
+                if (e.target === modal) modal.style.display = 'none';
             };
 
-            // 确认打赏
             document.getElementById('submitDonateBtn').onclick = () => {
                 const raw = amountInput.value.trim();
                 if (!raw) {
@@ -1543,155 +1555,60 @@ requestAnimationFrame(animateCanvas);
                     return;
                 }
 
-                // 隐藏输入区，显示二维码区
                 inputArea.style.display = 'none';
-                qrArea.style.display = 'block';
+                methodArea.style.display = 'block';
                 statusText.textContent = '';
-                statusText.style.color = '';
                 document.getElementById('submitDonateBtn').disabled = true;
-                document.getElementById('checkDonatePayBtn').disabled = true;
 
-                // 调支付接口
                 const title = '塔罗牌打赏';
-                fetch('/api/pay', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ price: amount, title })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (!data.ok) {
-                        qrLoading.style.display = 'none';
-                        statusText.textContent = '❌ 下单失败：' + (data.msg || '请重试');
+
+                function donateWithType(type) {
+                    statusText.textContent = '⏳ 正在跳转到支付页面...';
+                    statusText.style.color = '';
+                    fetch('/api/pay', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ price: amount, title, type })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.ok) {
+                            statusText.textContent = '❌ 下单失败：' + (data.msg || '请重试');
+                            statusText.style.color = '#ff6b6b';
+                            return;
+                        }
+                        submitPayForm(data.submitUrl, data.params);
+                    })
+                    .catch(err => {
+                        statusText.textContent = '❌ 网络错误：' + err.message;
                         statusText.style.color = '#ff6b6b';
-                        return;
-                    }
+                    });
+                }
 
-                    qrLoading.style.display = 'none';
-                    qrImage.src = data.qrCode;
-                    qrImage.style.display = 'block';
-                    document.getElementById('checkDonatePayBtn').disabled = false;
-                    statusText.textContent = '⏳ 等待付款中...';
-
-                    window.__tarotDonateOrder = data.orderNo;
-
-                    // 启动独立打赏轮询
-                    donatePollCount = 0;
-                    donateNotFoundCount = 0;
-                    donateBackoffCount = 0;
-                    donatePollInterval = POLL_CONFIG.INTERVAL;
-                    scheduleDonatePoll(data.orderNo);
-                })
-                .catch(err => {
-                    qrLoading.style.display = 'none';
-                    statusText.textContent = '❌ 网络错误：' + err.message;
-                    statusText.style.color = '#ff6b6b';
-                });
+                document.getElementById('donateAlipayBtn').onclick = () => donateWithType('alipay');
+                document.getElementById('donateWxpayBtn').onclick = () => donateWithType('wxpay');
             };
-
-            // "我已付款"
-            document.getElementById('checkDonatePayBtn').onclick = () => {
-                const orderNo = window.__tarotDonateOrder;
-                if (!orderNo) return;
-                statusText.textContent = '🔍 正在检查支付状态...';
-                statusText.style.color = '';
-                document.getElementById('checkDonatePayBtn').disabled = true;
-                checkDonatePayment(orderNo, true);
-            };
-        }
-
-        function checkDonatePayment(orderNo, isManual = false) {
-            if (!orderNo) return;
-
-            donatePollCount++;
-            if (donatePollCount > POLL_CONFIG.MAX_COUNT) {
-                stopDonatePolling();
-                const st = document.getElementById('donatePayStatusText');
-                st.textContent = '⏰ 支付超时，请关闭弹窗重试';
-                st.style.color = '#ffa500';
-                document.getElementById('checkDonatePayBtn').disabled = false;
-                return;
-            }
-
-            fetch('/api/check-order?orderNo=' + encodeURIComponent(orderNo))
-                .then(res => res.json())
-                .then(data => {
-                    donateBackoffCount = 0;
-                    donatePollInterval = POLL_CONFIG.INTERVAL;
-
-                    if (data.paid) {
-                        stopDonatePolling();
-                        const st = document.getElementById('donatePayStatusText');
-                        st.textContent = '✅ 打赏成功，谢谢客官 ≽^⦁⩊⦁^≼';
-                        st.style.color = '#4caf50';
-                        document.getElementById('checkDonatePayBtn').disabled = true;
-                        document.getElementById('closeDonatePayModal').style.pointerEvents = 'none';
-                        setTimeout(() => {
-                            document.getElementById('donatePayModal').style.display = 'none';
-                            // 恢复关闭按钮
-                            document.getElementById('closeDonatePayModal').style.pointerEvents = '';
-                        }, 2000);
-                    } else if (data.status === 'not_found') {
-                        // 冷启动/多实例导致暂时查不到，重试几次
-                        donateNotFoundCount = (donateNotFoundCount || 0) + 1;
-                        if (donateNotFoundCount <= 3) {
-                            donatePollInterval = 1500; // 1.5s 后重试
-                        } else {
-                            stopDonatePolling();
-                            const st = document.getElementById('donatePayStatusText');
-                            st.textContent = '⚠️ 订单已过期，请重新下单';
-                            st.style.color = '#ffa500';
-                            document.getElementById('checkDonatePayBtn').disabled = false;
-                        }
-                    } else {
-                        if (isManual) {
-                            document.getElementById('donatePayStatusText').textContent =
-                            '⏳ 尚未收到付款，请确认后重试';
-                            document.getElementById('checkDonatePayBtn').disabled = false;
-                        }
-                    }
-                })
-                .catch(() => {
-                    donateBackoffCount++;
-                    donatePollInterval = Math.min(
-                        POLL_CONFIG.BACKOFF_BASE * Math.pow(2, donateBackoffCount),
-                        POLL_CONFIG.BACKOFF_MAX
-                    );
-                    if (isManual) {
-                        document.getElementById('donatePayStatusText').textContent =
-                            '⚠️ 网络异常，请检查网络';
-                        document.getElementById('checkDonatePayBtn').disabled = false;
-                    }
-                });
-        }
-
-        function scheduleDonatePoll(orderNo) {
-            if (!orderNo || document.hidden) return;
-            donatePollTimer = setTimeout(() => {
-                checkDonatePayment(orderNo);
-                scheduleDonatePoll(orderNo);
-            }, donatePollInterval);
-        }
-
-        function stopDonatePolling() {
-            if (donatePollTimer) {
-                clearTimeout(donatePollTimer);
-                donatePollTimer = null;
-            }
-            donatePollCount = 0;
-            donateBackoffCount = 0;
         }
 
         function showPayModal() {
             const payModal = document.getElementById('payModal');
             const payPriceText = document.getElementById('payPriceText');
             const payStatusText = document.getElementById('payStatusText');
-            const payQRImage = document.getElementById('payQRImage');
-            const payQRLoading = document.getElementById('payQRLoading');
-            const checkPayBtn = document.getElementById('checkPayBtn');
+            const payMethodArea = document.getElementById('payMethodArea');
 
             if (!payModal) {
                 callDeepSeekAPI();
+                return;
+            }
+
+            // 从支付页面返回时，跳过弹窗，直接轮询确认
+            const skipOrderNo = window.__tarotSkipPayModal;
+            if (skipOrderNo) {
+                window.__tarotSkipPayModal = null;
+                payStatusText.textContent = '';
+                payModal.style.display = 'flex';
+                // 轮询等待支付回调
+                pollPayReturn(skipOrderNo);
                 return;
             }
 
@@ -1704,178 +1621,84 @@ requestAnimationFrame(animateCanvas);
                 ? `当前选择 ${n} 张牌阵，建议打赏：${priceText}，谢谢客官光顾`
                 : '谢谢客官的支持≽^ ⦁ ⩊ ⦁ ^≼';
             payStatusText.textContent = '';
-            payQRImage.style.display = 'none';
-            payQRLoading.style.display = 'block';
-            checkPayBtn.disabled = true;
+            payMethodArea.style.display = 'block';
             payModal.style.display = 'flex';
 
-            // 重置轮询状态
-            payPollCount = 0;
-            payNotFoundCount = 0;
-            payBackoffCount = 0;
-            payPollCurrentInterval = POLL_CONFIG.INTERVAL;
-            payVisibilityPaused = false;
-            stopPayPolling();
-
-            // 调后端创建订单
-            fetch('/api/pay', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ price, title })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (!data.ok) {
-                    payStatusText.textContent = '❌ 下单失败，请重试：' + (data.msg || '未知错误');
-                    payStatusText.style.color = '#ff6b6b';
-                    payQRLoading.style.display = 'none';
-                    checkPayBtn.disabled = false;
-                    checkPayBtn.textContent = '🔄 重新下单';
-                    checkPayBtn.onclick = () => {
-                        checkPayBtn.textContent = '我已付款 ✅';
-                        checkPayBtn.style.color = '';
-                        payStatusText.style.color = '';
-                        showPayModal();
-                    };
-                    return;
-                }
-
-                // 渲染二维码
-                payQRLoading.style.display = 'none';
-                payQRImage.src = data.qrCode;
-                payQRImage.style.display = 'block';
-                checkPayBtn.disabled = false;
-                checkPayBtn.textContent = '我已付款 ✅';
-
-                // 存储当前订单号
-                window.__tarotCurrentOrder = data.orderNo;
-
-                // 提示轮询中
-                payStatusText.textContent = '⏳ 等待付款中...';
-
-                // 启动轮询
-                scheduleNextPoll(data.orderNo);
-            })
-            .catch(err => {
-                payStatusText.textContent = '❌ 网络错误，下单失败：' + err.message;
-                payStatusText.style.color = '#ff6b6b';
-                payQRLoading.style.display = 'none';
-                checkPayBtn.disabled = false;
-                checkPayBtn.textContent = '🔄 重新下单';
-                checkPayBtn.onclick = () => {
-                    checkPayBtn.textContent = '我已付款 ✅';
-                    payStatusText.style.color = '';
-                    showPayModal();
-                };
-            });
-
-            // 关闭按钮
-            document.getElementById('closePayModal').addEventListener('click', () => {
-                stopPayPolling();
-                payModal.style.display = 'none';
-            });
-
-            // "我已付款"按钮
-            checkPayBtn.onclick = () => {
-                const orderNo = window.__tarotCurrentOrder;
-                if (!orderNo) return;
-                payStatusText.textContent = '🔍 正在检查支付状态...';
+            // 支付宝 / 微信 按钮点击 → 下单 + 跳转
+            function payWithType(type) {
+                payStatusText.textContent = '⏳ 正在跳转到支付页面...';
                 payStatusText.style.color = '';
-                checkPayBtn.disabled = true;
-                pollPaymentStatus(orderNo, true);
+
+                fetch('/api/pay', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ price, title, type })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.ok) {
+                        payStatusText.textContent = '❌ 下单失败：' + (data.msg || '请重试');
+                        payStatusText.style.color = '#ff6b6b';
+                        return;
+                    }
+
+                    // 保存状态到 sessionStorage，支付回来后恢复
+                    sessionStorage.setItem('tarot_pay_state', JSON.stringify({
+                        orderNo: data.orderNo,
+                        spreadId: AppState.selectedSpread?.id,
+                        question: document.getElementById('questionInput')?.value || '',
+                        selectedCards: AppState.selectedCards || []
+                    }));
+
+                    submitPayForm(data.submitUrl, data.params);
+                })
+                .catch(err => {
+                    payStatusText.textContent = '❌ 网络错误：' + err.message;
+                    payStatusText.style.color = '#ff6b6b';
+                });
+            }
+
+            document.getElementById('payAlipayBtn').onclick = () => payWithType('alipay');
+            document.getElementById('payWxpayBtn').onclick = () => payWithType('wxpay');
+
+            document.getElementById('closePayModal').onclick = () => {
+                payModal.style.display = 'none';
             };
         }
 
-        function pollPaymentStatus(orderNo, isManual = false) {
-            if (!orderNo) return;
+        // 从支付页面返回后的轮询
+        function pollPayReturn(orderNo) {
+            const payStatusText = document.getElementById('payStatusText');
+            const payModal = document.getElementById('payModal');
 
-            payPollCount++;
-            if (payPollCount > POLL_CONFIG.MAX_COUNT) {
-                stopPayPolling();
-                const statusEl = document.getElementById('payStatusText');
-                statusEl.textContent = '⏰ 支付超时（15分钟），请重新下单';
-                statusEl.style.color = '#ffa500';
-                const btn = document.getElementById('checkPayBtn');
-                btn.disabled = false;
-                btn.textContent = '🔄 重新下单';
-                btn.onclick = () => {
-                    btn.textContent = '我已付款 ✅';
-                    document.getElementById('payStatusText').style.color = '';
-                    showPayModal();
-                };
-                return;
-            }
-
-            fetch('/api/check-order?orderNo=' + encodeURIComponent(orderNo))
-                .then(res => res.json())
-                .then(data => {
-                    // 重置退避
-                    payBackoffCount = 0;
-                    payPollCurrentInterval = POLL_CONFIG.INTERVAL;
-
-                    if (data.paid) {
-                        // 支付成功！
-                        stopPayPolling();
-                        const statusEl = document.getElementById('payStatusText');
-                        statusEl.textContent = '✅ 支付成功！正在获取解牌结果...';
-                        statusEl.style.color = '#4caf50';
-                        document.getElementById('checkPayBtn').disabled = true;
-                        document.getElementById('closePayModal').style.pointerEvents = 'none';
-
-                        setTimeout(() => {
-                            document.getElementById('payModal').style.display = 'none';
-                            callDeepSeekAPI();
-                        }, 1500);
-                    } else if (data.status === 'not_found') {
-                        // 冷启动/多实例导致暂时查不到，重试几次
-                        payNotFoundCount = (payNotFoundCount || 0) + 1;
-                        if (payNotFoundCount <= 3) {
-                            payPollCurrentInterval = 1500; // 1.5s 后重试
+            let tries = 0;
+            function check() {
+                tries++;
+                fetch('/api/check-order?orderNo=' + encodeURIComponent(orderNo))
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.paid) {
+                            payStatusText.textContent = '✅ 支付成功！正在获取解牌结果...';
+                            payStatusText.style.color = '#4caf50';
+                            document.getElementById('closePayModal').style.pointerEvents = 'none';
+                            setTimeout(() => {
+                                payModal.style.display = 'none';
+                                callDeepSeekAPI();
+                            }, 1500);
+                        } else if (data.status === 'not_found' && tries < 30) {
+                            setTimeout(check, 2000);
+                        } else if (tries < 30) {
+                            setTimeout(check, 2000);
                         } else {
-                            stopPayPolling();
-                            const statusEl = document.getElementById('payStatusText');
-                            statusEl.textContent = '⚠️ 订单已过期，请关闭弹窗重新抽取牌阵';
-                            statusEl.style.color = '#ffa500';
-                            document.getElementById('checkPayBtn').disabled = false;
+                            payStatusText.textContent = '⚠️ 支付确认超时，请关闭弹窗重试';
+                            payStatusText.style.color = '#ffa500';
                         }
-                    } else {
-                        if (isManual) {
-                            document.getElementById('payStatusText').textContent =
-                                '⏳ 尚未收到付款，请确认已完成支付后重试';
-                            document.getElementById('checkPayBtn').disabled = false;
-                        }
-                    }
-                })
-                .catch(() => {
-                    // 网络错误 — 指数退避
-                    payBackoffCount++;
-                    payPollCurrentInterval = Math.min(
-                        POLL_CONFIG.BACKOFF_BASE * Math.pow(2, payBackoffCount),
-                        POLL_CONFIG.BACKOFF_MAX
-                    );
-
-                    if (isManual) {
-                        document.getElementById('payStatusText').textContent =
-                            '⚠️ 网络异常，请检查网络后重试';
-                        document.getElementById('checkPayBtn').disabled = false;
-                    }
-                });
-        }
-
-        function scheduleNextPoll(orderNo) {
-            if (!orderNo || document.hidden) return;
-            payPollTimer = setTimeout(() => {
-                pollPaymentStatus(orderNo);
-                scheduleNextPoll(orderNo);
-            }, payPollCurrentInterval);
-        }
-
-        function stopPayPolling() {
-            if (payPollTimer) {
-                clearTimeout(payPollTimer);
-                payPollTimer = null;
+                    })
+                    .catch(() => {
+                        if (tries < 30) setTimeout(check, 2000);
+                    });
             }
-            payPollCount = 0;
+            check();
         }
 
         async function callDeepSeekAPI() {
@@ -2044,3 +1867,6 @@ ${drawnText}
                 }, 600);
             }
         }
+
+        // 页面加载时检查是否从支付页面返回
+        checkReturnPayment();
