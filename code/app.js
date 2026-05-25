@@ -1455,11 +1455,12 @@ requestAnimationFrame(animateCanvas);
         // ========== 支付流程 ==========
 
         // 构建隐藏表单并提交到易支付（跳转支付）
-        function submitPayForm(submitUrl, params) {
+        function submitPayForm(submitUrl, params, target) {
             const form = document.createElement('form');
             form.action = submitUrl;
             form.method = 'post';
             form.style.display = 'none';
+            if (target) form.target = target;
             for (const key in params) {
                 const input = document.createElement('input');
                 input.type = 'hidden';
@@ -1584,7 +1585,7 @@ requestAnimationFrame(animateCanvas);
                 const title = '塔罗牌打赏';
 
                 function donateWithType(type) {
-                    statusText.textContent = '⏳ 正在跳转到支付页面，请耐心等待...';
+                    statusText.textContent = '⏳ 正在打开支付页面，请耐心等待...';
                     statusText.style.color = '';
                     fetch('/api/pay', {
                         method: 'POST',
@@ -1598,12 +1599,47 @@ requestAnimationFrame(animateCanvas);
                             statusText.style.color = '#ff6b6b';
                             return;
                         }
-                        submitPayForm(data.submitUrl, data.params);
-                        // 保存待支付标记，用户回来后自动检测
+                        // 保存待支付标记
                         localStorage.setItem('tarot_pending_donate', JSON.stringify({
                             orderNo: data.orderNo,
                             timestamp: Date.now()
                         }));
+                        // 新窗口打开支付
+                        submitPayForm(data.submitUrl, data.params, '_blank');
+
+                        // 显示打赏验证按钮
+                        methodArea.style.display = 'none';
+                        statusText.textContent = '';
+                        const donateVerifyArea = document.getElementById('donatePayVerifyArea');
+                        const donateVerifyBtn = document.getElementById('donateVerifyBtn');
+                        const donateVerifyNote = document.getElementById('donateVerifyNote');
+                        donateVerifyArea.style.display = 'block';
+                        donateVerifyNote.textContent = '';
+
+                        donateVerifyBtn.onclick = function() {
+                            donateVerifyBtn.disabled = true;
+                            donateVerifyNote.textContent = '⏳ 正在确认打赏...';
+                            donateVerifyNote.style.color = '';
+                            fetch('/api/check-order?orderNo=' + encodeURIComponent(data.orderNo))
+                                .then(r => r.json())
+                                .then(d => {
+                                    if (d.paid) {
+                                        localStorage.removeItem('tarot_pending_donate');
+                                        donateVerifyNote.textContent = '✅ 打赏成功，谢谢客官 ≽^⦁⩊⦁^≼';
+                                        donateVerifyNote.style.color = '#4caf50';
+                                        setTimeout(() => { modal.style.display = 'none'; }, 2000);
+                                    } else {
+                                        donateVerifyBtn.disabled = false;
+                                        donateVerifyNote.textContent = '⚠️ 暂未检测到打赏，请确认已付款后重试';
+                                        donateVerifyNote.style.color = '#ffa500';
+                                    }
+                                })
+                                .catch(() => {
+                                    donateVerifyBtn.disabled = false;
+                                    donateVerifyNote.textContent = '❌ 网络错误，请重试';
+                                    donateVerifyNote.style.color = '#ff6b6b';
+                                });
+                        };
                     })
                     .catch(err => {
                         statusText.textContent = '❌ 网络错误：' + err.message;
@@ -1690,9 +1726,9 @@ requestAnimationFrame(animateCanvas);
             payMethodArea.style.display = 'block';
             payModal.style.display = 'flex';
 
-            // 支付宝 / 微信 按钮点击 → 下单 + 跳转
+            // 支付宝 / 微信 按钮点击 → 下单 + 新窗口支付 + 即时验证
             function payWithType(type) {
-                payStatusText.textContent = '⏳ 正在跳转到支付页面，请耐心等待...';
+                payStatusText.textContent = '⏳ 正在打开支付页面，请耐心等待...';
                 payStatusText.style.color = '';
 
                 fetch('/api/pay', {
@@ -1708,7 +1744,7 @@ requestAnimationFrame(animateCanvas);
                         return;
                     }
 
-                    // 保存状态到 localStorage，回来时自动恢复
+                    // 保存状态到 localStorage，页面刷新恢复时使用
                     localStorage.setItem('tarot_pay_state', JSON.stringify({
                         orderNo: data.orderNo,
                         spreadId: AppState.selectedSpread?.id,
@@ -1717,7 +1753,46 @@ requestAnimationFrame(animateCanvas);
                         timestamp: Date.now()
                     }));
 
-                    submitPayForm(data.submitUrl, data.params);
+                    // 新窗口打开支付页面，原页面保留不动
+                    submitPayForm(data.submitUrl, data.params, '_blank');
+
+                    // 立刻显示「我已支付成功」验证按钮
+                    payMethodArea.style.display = 'none';
+                    payStatusText.textContent = '';
+                    const payVerifyArea = document.getElementById('payVerifyArea');
+                    const payVerifyBtn = document.getElementById('payVerifyBtn');
+                    const payVerifyNote = document.getElementById('payVerifyNote');
+                    payVerifyArea.style.display = 'block';
+                    payVerifyNote.textContent = '';
+
+                    payVerifyBtn.onclick = function() {
+                        payVerifyBtn.disabled = true;
+                        payVerifyNote.textContent = '⏳ 正在确认支付，请耐心等待...';
+                        payVerifyNote.style.color = '';
+                        fetch('/api/check-order?orderNo=' + encodeURIComponent(data.orderNo))
+                            .then(r => r.json())
+                            .then(d => {
+                                if (d.paid) {
+                                    localStorage.removeItem('tarot_pay_state');
+                                    payVerifyNote.textContent = '✅ 支付成功！正在生成解牌结果...';
+                                    payVerifyNote.style.color = '#4caf50';
+                                    document.getElementById('closePayModal').style.pointerEvents = 'none';
+                                    setTimeout(() => {
+                                        payModal.style.display = 'none';
+                                        callDeepSeekAPI();
+                                    }, 1500);
+                                } else {
+                                    payVerifyBtn.disabled = false;
+                                    payVerifyNote.textContent = '⚠️ 暂未检测到支付，请确认已付款后重试';
+                                    payVerifyNote.style.color = '#ffa500';
+                                }
+                            })
+                            .catch(() => {
+                                payVerifyBtn.disabled = false;
+                                payVerifyNote.textContent = '❌ 网络错误，请重试';
+                                payVerifyNote.style.color = '#ff6b6b';
+                            });
+                    };
                 })
                 .catch(err => {
                     payStatusText.textContent = '❌ 网络错误：' + err.message;
