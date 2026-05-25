@@ -79,7 +79,20 @@ export default async function handler(req, res) {
       subject: title,
     });
 
-    const qrCode = result.alipay_trade_precreate_response.qr_code;
+    // 检查支付宝是否返回了业务错误
+    const bizResp = result.alipay_trade_precreate_response;
+    if (!bizResp) {
+      const errResp = result.error_response;
+      console.error('[pay] 支付宝业务错误:', JSON.stringify(errResp || result));
+      return res.json({ ok: false, msg: (errResp && errResp.sub_msg) || (errResp && errResp.msg) || '支付宝接口异常' });
+    }
+
+    if (bizResp.code !== '10000') {
+      console.error('[pay] 支付宝业务错误:', bizResp.code, bizResp.sub_msg || bizResp.msg);
+      return res.json({ ok: false, msg: bizResp.sub_msg || bizResp.msg || bizResp.code });
+    }
+
+    const qrCode = bizResp.qr_code;
 
     res.json({
       ok: true,
