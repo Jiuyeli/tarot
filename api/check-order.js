@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ ok: false, error: '缺少 orderNo 参数' });
   }
 
-  const order = getOrder(orderNo);
+  const order = await getOrder(orderNo);
 
   if (!order) {
     console.warn(`[check-order] 订单未找到: ${orderNo}（可能因实例冷启动/多实例导致数据丢失）`);

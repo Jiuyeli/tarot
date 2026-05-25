@@ -53,7 +53,7 @@ export default async function handler(req, res) {
   const orderNo = generateOrderNo();
 
   try {
-    createOrder(orderNo, priceInCent, title);
+    await createOrder(orderNo, priceInCent, title);
 
     // 支付成功后跳回站点，附上 orderNo 供前端检测
     const action = (title === '塔罗牌打赏') ? 'donate' : 'pay';

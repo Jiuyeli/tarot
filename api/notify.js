@@ -58,7 +58,7 @@ export default async function handler(req, res) {
 
     // 4. 查询订单
     const outTradeNo = params.out_trade_no;
-    const storedOrder = getOrder(outTradeNo);
+    const storedOrder = await getOrder(outTradeNo);
     if (!storedOrder) {
       console.error('[notify] 订单不存在:', outTradeNo);
       return res.status(200).send('fail');
@@ -73,7 +73,7 @@ export default async function handler(req, res) {
     }
 
     // 6. 标记已支付（幂等）
-    const result = markOrderPaid(outTradeNo);
+    const result = await markOrderPaid(outTradeNo);
     if (!result.success) {
       console.error('[notify] 标记支付失败:', outTradeNo);
       return res.status(200).send('fail');
