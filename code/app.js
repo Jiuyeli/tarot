@@ -1627,14 +1627,50 @@ requestAnimationFrame(animateCanvas);
                 return;
             }
 
-            // 从支付页面返回时，跳过弹窗，直接轮询确认
+            // 从支付页面返回时，显示「我已支付」验证按钮
             const skipOrderNo = window.__tarotSkipPayModal;
             if (skipOrderNo) {
                 window.__tarotSkipPayModal = null;
-                payStatusText.textContent = '';
+
+                const payVerifyArea = document.getElementById('payVerifyArea');
+                const payVerifyBtn = document.getElementById('payVerifyBtn');
+                const payVerifyNote = document.getElementById('payVerifyNote');
+
+                payPriceText.textContent = '';
+                payMethodArea.style.display = 'none';
+                payVerifyArea.style.display = 'block';
+                payVerifyNote.textContent = '';
                 payModal.style.display = 'flex';
-                // 轮询等待支付回调
-                pollPayReturn(skipOrderNo);
+
+                payVerifyBtn.onclick = function() {
+                    payVerifyBtn.disabled = true;
+                    payVerifyNote.textContent = '⏳ 正在确认支付，请耐心等待...';
+                    payVerifyNote.style.color = '';
+
+                    fetch('/api/check-order?orderNo=' + encodeURIComponent(skipOrderNo))
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.paid) {
+                                localStorage.removeItem('tarot_pay_state');
+                                payVerifyNote.textContent = '✅ 支付成功！正在生成解牌结果...';
+                                payVerifyNote.style.color = '#4caf50';
+                                document.getElementById('closePayModal').style.pointerEvents = 'none';
+                                setTimeout(() => {
+                                    payModal.style.display = 'none';
+                                    callDeepSeekAPI();
+                                }, 1500);
+                            } else {
+                                payVerifyBtn.disabled = false;
+                                payVerifyNote.textContent = '⚠️ 暂未检测到支付，请确认已付款后重试';
+                                payVerifyNote.style.color = '#ffa500';
+                            }
+                        })
+                        .catch(() => {
+                            payVerifyBtn.disabled = false;
+                            payVerifyNote.textContent = '❌ 网络错误，请重试';
+                            payVerifyNote.style.color = '#ff6b6b';
+                        });
+                };
                 return;
             }
 
@@ -1691,42 +1727,6 @@ requestAnimationFrame(animateCanvas);
             document.getElementById('closePayModal').onclick = () => {
                 payModal.style.display = 'none';
             };
-        }
-
-        // 从支付页面返回后的轮询
-        function pollPayReturn(orderNo) {
-            const payStatusText = document.getElementById('payStatusText');
-            const payModal = document.getElementById('payModal');
-
-            let tries = 0;
-            function check() {
-                tries++;
-                fetch('/api/check-order?orderNo=' + encodeURIComponent(orderNo))
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.paid) {
-                            localStorage.removeItem('tarot_pay_state');
-                            payStatusText.textContent = '✅ 支付成功！正在获取解牌结果...';
-                            payStatusText.style.color = '#4caf50';
-                            document.getElementById('closePayModal').style.pointerEvents = 'none';
-                            setTimeout(() => {
-                                payModal.style.display = 'none';
-                                callDeepSeekAPI();
-                            }, 1500);
-                        } else if (data.status === 'not_found' && tries < 30) {
-                            setTimeout(check, 2000);
-                        } else if (tries < 30) {
-                            setTimeout(check, 2000);
-                        } else {
-                            payStatusText.textContent = '⚠️ 支付确认超时，请关闭弹窗重试';
-                            payStatusText.style.color = '#ffa500';
-                        }
-                    })
-                    .catch(() => {
-                        if (tries < 30) setTimeout(check, 2000);
-                    });
-            }
-            check();
         }
 
         async function callDeepSeekAPI() {
