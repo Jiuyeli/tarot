@@ -1577,6 +1577,7 @@ requestAnimationFrame(animateCanvas);
 
                     // 启动独立打赏轮询
                     donatePollCount = 0;
+                    donateNotFoundCount = 0;
                     donateBackoffCount = 0;
                     donatePollInterval = POLL_CONFIG.INTERVAL;
                     scheduleDonatePoll(data.orderNo);
@@ -1631,15 +1632,23 @@ requestAnimationFrame(animateCanvas);
                             document.getElementById('closeDonatePayModal').style.pointerEvents = '';
                         }, 2000);
                     } else if (data.status === 'not_found') {
-                        stopDonatePolling();
-                        const st = document.getElementById('donatePayStatusText');
-                        st.textContent = '⚠️ 订单已过期，请重新下单';
-                        st.style.color = '#ffa500';
-                        document.getElementById('checkDonatePayBtn').disabled = false;
-                    } else if (isManual) {
-                        document.getElementById('donatePayStatusText').textContent =
+                        // 冷启动/多实例导致暂时查不到，重试几次
+                        donateNotFoundCount = (donateNotFoundCount || 0) + 1;
+                        if (donateNotFoundCount <= 3) {
+                            donatePollInterval = 1500; // 1.5s 后重试
+                        } else {
+                            stopDonatePolling();
+                            const st = document.getElementById('donatePayStatusText');
+                            st.textContent = '⚠️ 订单已过期，请重新下单';
+                            st.style.color = '#ffa500';
+                            document.getElementById('checkDonatePayBtn').disabled = false;
+                        }
+                    } else {
+                        if (isManual) {
+                            document.getElementById('donatePayStatusText').textContent =
                             '⏳ 尚未收到付款，请确认后重试';
-                        document.getElementById('checkDonatePayBtn').disabled = false;
+                            document.getElementById('checkDonatePayBtn').disabled = false;
+                        }
                     }
                 })
                 .catch(() => {
@@ -1702,6 +1711,7 @@ requestAnimationFrame(animateCanvas);
 
             // 重置轮询状态
             payPollCount = 0;
+            payNotFoundCount = 0;
             payBackoffCount = 0;
             payPollCurrentInterval = POLL_CONFIG.INTERVAL;
             payVisibilityPaused = false;
@@ -1817,16 +1827,23 @@ requestAnimationFrame(animateCanvas);
                             callDeepSeekAPI();
                         }, 1500);
                     } else if (data.status === 'not_found') {
-                        // 订单丢失（冷启动/多实例）
-                        stopPayPolling();
-                        const statusEl = document.getElementById('payStatusText');
-                        statusEl.textContent = '⚠️ 订单已过期，请关闭弹窗重新抽取牌阵';
-                        statusEl.style.color = '#ffa500';
-                        document.getElementById('checkPayBtn').disabled = false;
-                    } else if (isManual) {
-                        document.getElementById('payStatusText').textContent =
-                            '⏳ 尚未收到付款，请确认已完成支付后重试';
-                        document.getElementById('checkPayBtn').disabled = false;
+                        // 冷启动/多实例导致暂时查不到，重试几次
+                        payNotFoundCount = (payNotFoundCount || 0) + 1;
+                        if (payNotFoundCount <= 3) {
+                            payPollCurrentInterval = 1500; // 1.5s 后重试
+                        } else {
+                            stopPayPolling();
+                            const statusEl = document.getElementById('payStatusText');
+                            statusEl.textContent = '⚠️ 订单已过期，请关闭弹窗重新抽取牌阵';
+                            statusEl.style.color = '#ffa500';
+                            document.getElementById('checkPayBtn').disabled = false;
+                        }
+                    } else {
+                        if (isManual) {
+                            document.getElementById('payStatusText').textContent =
+                                '⏳ 尚未收到付款，请确认已完成支付后重试';
+                            document.getElementById('checkPayBtn').disabled = false;
+                        }
                     }
                 })
                 .catch(() => {
