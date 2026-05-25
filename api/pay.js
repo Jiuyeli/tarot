@@ -84,7 +84,11 @@ export default async function handler(req, res) {
 
     const result = await resp.json();
 
-    if (result.code === 200) {
+    // 调试日志：打印完整响应
+    console.log('[pay] 易支付响应:', JSON.stringify(result));
+
+    // 易支付成功标志可能是 code===200 或 status==='SUCCESS' 等，需根据实际文档调整
+    if (result.code === 200 || result.status === 'SUCCESS' || (result.code_url || result.qrcode)) {
       res.json({
         ok: true,
         qrCode: result.code_url || result.qrcode,
@@ -93,7 +97,9 @@ export default async function handler(req, res) {
       });
     } else {
       console.error('[pay] 易支付下单失败:', result.code, result.msg);
-      res.json({ ok: false, msg: result.msg || `下单失败 (${result.code})` });
+      // 如果 msg 包含"成功"但 code 不对，可能是接口返回格式问题
+      const errorMsg = result.msg || `下单失败 (${result.code})`;
+      res.json({ ok: false, msg: errorMsg });
     }
   } catch (err) {
     console.error('[pay] 异常:', err.message);
