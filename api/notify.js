@@ -3,7 +3,7 @@ import { getOrder, markOrderPaid } from '../lib/store.js';
 
 // 易支付配置（与 pay.js 一致）
 const PAY_CONFIG = {
-  pid: 3995,
+  pid: '3995',
   key: 'eMuHaThDYh3vGDRSsLgQyw5Oq32IcOBg',
 };
 
@@ -45,15 +45,15 @@ export default async function handler(req, res) {
     }
 
     // 2. 验证商户 ID
-    if (parseInt(params.pid) !== PAY_CONFIG.pid) {
+    if (params.pid !== PAY_CONFIG.pid) {
       console.error('[notify] pid 不匹配:', params.pid);
       return res.status(200).send('fail');
     }
 
-    // 3. 验证交易状态
+    // 3. 验证交易状态（非成功状态返回 fail，让易支付稍后重试）
     if (params.trade_status !== 'TRADE_SUCCESS') {
-      // 非成功状态也返回 success，避免易支付重复通知
-      return res.status(200).send('success');
+      console.warn('[notify] 交易状态非成功:', params.trade_status, '订单:', params.out_trade_no);
+      return res.status(200).send('fail');
     }
 
     // 4. 查询订单
