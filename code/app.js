@@ -1483,8 +1483,8 @@ requestAnimationFrame(animateCanvas);
             // --- 打赏按钮（结果页） ---
             document.getElementById('donateBtn').addEventListener('click', showDonatePayModal);
 
-            // 先弹支付弹窗，付款后再调 DeepSeek
-            showPayModal();
+            // 先生成解牌结果，完成后再弹出支付弹窗
+            callDeepSeekAPI();
         }
 
         // ========== 支付流程 ==========
@@ -1794,6 +1794,8 @@ requestAnimationFrame(animateCanvas);
                 };
 
                 payVerifyBtn.onclick = function() {
+                    // 🔒 以下为 API 验证逻辑，暂时注释掉（点击直接放行）
+                    /*
                     payVerifyBtn.disabled = true;
                     payVerifyNote.textContent = '⏳ 正在确认支付，请耐心等待...';
                     payVerifyNote.style.color = '';
@@ -1821,6 +1823,9 @@ requestAnimationFrame(animateCanvas);
                             payVerifyNote.textContent = '❌ 网络错误，请重试';
                             payVerifyNote.style.color = '#ff6b6b';
                         });
+                    */
+                    localStorage.removeItem('tarot_pay_state');
+                    payModal.style.display = 'none';
                 };
                 return;
             }
@@ -1892,6 +1897,8 @@ requestAnimationFrame(animateCanvas);
                     payVerifyNote.textContent = '';
 
                     payVerifyBtn.onclick = function() {
+                        // 🔒 以下为 API 验证 + 5 轮重试逻辑，暂时注释掉（点击直接放行）
+                        /*
                         payVerifyBtn.disabled = true;
                         var retries = 0;
                         var maxRetries = 5;
@@ -1930,6 +1937,9 @@ requestAnimationFrame(animateCanvas);
                                 });
                         }
                         tryCheck();
+                        */
+                        localStorage.removeItem('tarot_pay_state');
+                        payModal.style.display = 'none';
                     };
                 })
                 .catch(err => {
@@ -2055,7 +2065,10 @@ ${drawnText}
                         resultBtnRow.style.opacity = '1';
                     }, 1200);
                 }, 500);
-                
+
+                // 结果已生成，弹出支付弹窗
+                setTimeout(() => { showPayModal(); }, 3500);
+
                 function formatAPIContent(text) {
                     let html = text.replace(/\n/g, '<br>');
                     // Bold to keyword tags
