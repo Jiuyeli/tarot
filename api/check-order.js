@@ -7,6 +7,11 @@ import { getOrder } from '../lib/store.js';
  * 极轻量，只读查询，不写任何数据。Vercel 免费版 10 秒超时内必定完成。
  */
 export default async function handler(req, res) {
+  // 禁止 Vercel CDN 缓存，每次请求必须打到函数
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
